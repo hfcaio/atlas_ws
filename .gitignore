@@ -1,0 +1,61 @@
+# ---------------------------------------------------------------------------
+# colcon (host e container) — espaços de build/install/log são sempre gerados
+# ---------------------------------------------------------------------------
+build/
+install/
+log/
+build_docker/
+install_docker/
+log_docker/
+
+# ---------------------------------------------------------------------------
+# Repos UPSTREAM clonados por `atlas-ws-init` — NÃO versionar (são ~5 GB).
+# Cada colaborador re-clona com: atlas-ws-init
+# ---------------------------------------------------------------------------
+/src/ardupilot/
+/src/ardupilot_gazebo/
+/src/ardupilot_gz/
+/src/SITL_Models/
+
+# pasta antiga de missões (movida para src/icarus_tests e src/atlas_mission)
+/src/missions/
+
+# ---------------------------------------------------------------------------
+# Artefactos de simulacao / voo
+# ---------------------------------------------------------------------------
+*.tlog
+*.tlog.raw
+*.BIN
+*.bin
+eeprom.bin
+mav.parm
+logs/
+terrain/
+
+# core dumps (um destes, de 566 MB, foi commitado por engano)
+core
+core.*
+*.core
+vgcore.*
+
+# ---------------------------------------------------------------------------
+# Python
+# ---------------------------------------------------------------------------
+**/__pycache__/
+*.pyc
+*.egg-info/
+*.egg
+
+# ---------------------------------------------------------------------------
+# Docker / segredos locais
+# ---------------------------------------------------------------------------
+docker/.env
+
+# ---------------------------------------------------------------------------
+# Editores / SO
+# ---------------------------------------------------------------------------
+.vscode/
+.idea/
+*.swp
+*~
+.DS_Store

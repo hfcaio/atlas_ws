@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# ap-mavros [fcu_url]
+#
+# Default: udp://:14550@  (recebe o --out=udp:127.0.0.1:14550 do ap-sitl)
+# Com NO_MAVPROXY=1 no ap-sitl:  ap-mavros tcp://127.0.0.1:5760
+#
+# Env: GCS_URL, TGT_SYSTEM, TGT_COMPONENT, INSTANCE, MAVROS_NS
+set -euo pipefail
+
+INSTANCE="${INSTANCE:-0}"
+DEFAULT_PORT=$((14550 + INSTANCE * 10))
+
+FCU_URL="${1:-${FCU_URL:-udp://:${DEFAULT_PORT}@}}"
+GCS_URL="${GCS_URL:-}"
+
+echo ">> MAVROS fcu_url=${FCU_URL} gcs_url=${GCS_URL:-<none>}"
+
+# gcs_url so' entra se nao-vazio (ros2 launch rejeita 'gcs_url:=' vazio).
+ARGS=(fcu_url:="${FCU_URL}" tgt_system:="${TGT_SYSTEM:-1}" tgt_component:="${TGT_COMPONENT:-1}")
+[ -n "${GCS_URL}" ] && ARGS+=(gcs_url:="${GCS_URL}")
+
+exec ros2 launch mavros apm.launch "${ARGS[@]}"

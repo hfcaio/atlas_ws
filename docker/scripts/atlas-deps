@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# atlas-deps : resolve as dependencias do workspace com rosdep.
+# As regras do Gazebo Harmonic para Humble ja estao instaladas na imagem
+# (/etc/ros/rosdep/sources.list.d/00-gazebo.list).
+set -euo pipefail
+
+: "${ATLAS_WS:=/home/ros/atlas_ws}"
+cd "${ATLAS_WS}"
+
+sudo apt-get update
+rosdep update --rosdistro "${ROS_DISTRO:-humble}" || true
+# mavros/mavros_msgs/mavros_extras/libmavconn vem do overlay compilado na imagem
+# (/opt/mavros_ws), nao do apt -> pular essas chaves no rosdep.
+rosdep install --from-paths src --ignore-src -r -y \
+  --skip-keys "gazebo-ros-pkgs gazebo_ros_pkgs mavros mavros_msgs mavros_extras libmavconn micro_ros_agent" "$@"

@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# ap-gazebo [copter|plane|vtol|maze|<mundo>.sdf]
+#
+# Os mundos vem do workspace: os hooks do ardupilot_gazebo e do SITL_Models
+# poem models/ e worlds/ no GZ_SIM_RESOURCE_PATH quando o install esta sourced.
+#
+# Env:
+#   HEADLESS=1   -> gz sim -s (sem GUI)
+#   GUI_ONLY=1   -> gz sim -g (anexa a um servidor ja a correr)
+#   RENDER=ogre  -> render engine antigo (VM / GL por software)
+set -euo pipefail
+
+VEHICLE="${1:-${VEHICLE:-copter}}"
+
+case "${VEHICLE}" in
+  copter|iris)         WORLD="iris_runway.sdf" ;;
+  plane|zephyr)        WORLD="zephyr_runway.sdf" ;;
+  vtol|quadplane|alti) WORLD="alti_transition_runway.sdf" ;;
+  maze)                WORLD="iris_maze.sdf" ;;
+  *.sdf)               WORLD="${VEHICLE}" ;;
+  *) echo "uso: ap-gazebo [copter|plane|vtol|maze|<mundo>.sdf]" >&2; exit 1 ;;
+esac
+shift || true
+
+if [ -z "${GZ_SIM_RESOURCE_PATH:-}" ]; then
+  echo "!! GZ_SIM_RESOURCE_PATH vazio: o workspace nao tem ardupilot_gazebo/SITL_Models" >&2
+  echo "   corre 'atlas-ws-init' e depois 'atlas-build'." >&2
+fi
+
+ARGS=(-v4 -r)
+[ "${HEADLESS:-0}" = "1" ] && ARGS+=(-s)
+[ "${GUI_ONLY:-0}" = "1" ] && ARGS=(-v4 -g)
+[ -n "${RENDER:-}" ] && ARGS+=(--render-engine "${RENDER}")
+
+echo ">> gz sim ${ARGS[*]} ${WORLD}"
+exec gz sim "${ARGS[@]}" "${WORLD}" "$@"

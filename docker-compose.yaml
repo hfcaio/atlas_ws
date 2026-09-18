@@ -1,0 +1,23 @@
+services:
+  atlas:
+    image: caixinha
+    container_name: atlas
+    restart: unless-stopped
+
+    privileged: true
+    network_mode: host
+
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - DISPLAY=${DISPLAY}
+      - QT_X11_NO_MITSHM=1
+
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - ${HOME}/.ssh:/home/ros/.ssh
+      - /home/caio/git_projects/atlas_ws/:/home/ros/atlas
+
+    stdin_open: true
+    tty: true

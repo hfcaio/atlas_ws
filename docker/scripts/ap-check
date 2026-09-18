@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+# ap-check : estado do ambiente e do workspace (nao arranca simulacao)
+set -uo pipefail
+
+ok()   { echo "  [ OK ] $1"; }
+warn() { echo "  [ -- ] $1"; }
+fail() { echo "  [FAIL] $1"; }
+
+: "${ATLAS_WS:=/home/ros/atlas_ws}"
+
+echo "== ROS 2 =="
+[ -n "${ROS_DISTRO:-}" ] && ok "ROS_DISTRO=${ROS_DISTRO}" || fail "ROS nao sourced"
+for p in mavros mavros_extras ros_gz_bridge; do
+  ros2 pkg prefix "$p" >/dev/null 2>&1 && ok "$p" || fail "$p"
+done
+
+echo "== Gazebo =="
+gz sim --versions >/dev/null 2>&1 && ok "gz sim $(gz sim --versions 2>/dev/null | head -1)" || fail "gz sim"
+[ "${GZ_VERSION:-}" = "harmonic" ] && ok "GZ_VERSION=harmonic" || warn "GZ_VERSION=${GZ_VERSION:-<vazio>}"
+
+echo "== ArduPilot =="
+echo "  ARDUPILOT_HOME=${ARDUPILOT_HOME:-<vazio>}"
+command -v sim_vehicle.py >/dev/null && ok "sim_vehicle.py" || fail "sim_vehicle.py"
+command -v mavproxy.py >/dev/null && ok "mavproxy.py" || fail "mavproxy.py"
+command -v microxrceddsgen >/dev/null && ok "microxrceddsgen" || fail "microxrceddsgen"
+for b in arducopter arduplane; do
+  [ -x "${ARDUPILOT_HOME:-/opt/ardupilot}/build/sitl/bin/$b" ] \
+    && ok "$b compilado" || warn "$b por compilar (o sim_vehicle.py compila a 1a vez)"
+done
+
+echo "== Workspace (${ATLAS_WS}) =="
+for d in ardupilot ardupilot_gazebo ardupilot_gz SITL_Models; do
+  [ -d "${ATLAS_WS}/src/$d" ] && ok "src/$d" || warn "src/$d em falta (atlas-ws-init)"
+done
+[ -n "${ATLAS_OVERLAY:-}" ] && ok "overlay: ${ATLAS_OVERLAY}" || warn "workspace por compilar (atlas-build)"
+[ -f "${ATLAS_WS}/src/ardupilot_gazebo/build/libArduPilotPlugin.so" ] \
+  && warn "plugin compilado a mao em src/ardupilot_gazebo/build (o colcon usa build_docker)"
+
+echo "== Mundos =="
+if [ -n "${GZ_SIM_RESOURCE_PATH:-}" ]; then
+  for w in iris_runway.sdf zephyr_runway.sdf alti_transition_runway.sdf; do
+    find ${GZ_SIM_RESOURCE_PATH//:/ } -maxdepth 2 -name "$w" 2>/dev/null | grep -q . \
+      && ok "$w" || warn "$w nao encontrado"
+  done
+else
+  fail "GZ_SIM_RESOURCE_PATH vazio"
+fi
+
+echo "== Outros =="
+[ -d /usr/share/GeographicLib/geoids ] && ok "datasets GeographicLib" || fail "datasets GeographicLib"
+[ -n "${DISPLAY:-}" ] && ok "DISPLAY=${DISPLAY}" || warn "sem DISPLAY (headless)"

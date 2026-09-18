@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+# atlas-env : ambiente do container (feito para ser "source", nao executado)
+#
+# Ordem:
+#   1. /opt/ros/humble/setup.bash
+#   2. overlay do workspace: $ATLAS_WS/install_docker (default do atlas-build)
+#      ou $ATLAS_WS/install se for o unico que existir
+#   3. ArduPilot: usa $ATLAS_WS/src/ardupilot se existir; senao /opt/ardupilot
+#   4. Fallback dos paths do Gazebo a partir do src, caso o workspace ainda
+#      nao tenha sido compilado (com o workspace compilado, quem trata disto
+#      sao os hooks dos proprios pacotes)
+
+: "${ATLAS_WS:=/home/ros/atlas_ws}"
+export ATLAS_WS
+
+source /opt/ros/humble/setup.bash
+
+# MAVROS compilado da fonte na imagem (repo binario indisponivel; ver docker/patches).
+[ -f /opt/mavros_ws/install/setup.bash ] && source /opt/mavros_ws/install/setup.bash
+
+if [ -f "${ATLAS_WS}/install_docker/setup.bash" ]; then
+    source "${ATLAS_WS}/install_docker/setup.bash"
+    export ATLAS_OVERLAY="${ATLAS_WS}/install_docker"
+elif [ -f "${ATLAS_WS}/install/setup.bash" ]; then
+    source "${ATLAS_WS}/install/setup.bash"
+    export ATLAS_OVERLAY="${ATLAS_WS}/install"
+else
+    export ATLAS_OVERLAY=""
+fi
+
+# --- ArduPilot ---------------------------------------------------------------
+if [ -d "${ATLAS_WS}/src/ardupilot/Tools/autotest" ]; then
+    export ARDUPILOT_HOME="${ATLAS_WS}/src/ardupilot"
+else
+    export ARDUPILOT_HOME="/opt/ardupilot"
+fi
+case ":${PATH}:" in
+    *":${ARDUPILOT_HOME}/Tools/autotest:"*) ;;
+    *) export PATH="${ARDUPILOT_HOME}/Tools/autotest:${PATH}" ;;
+esac
+
+# --- SITL_Models (param files do VTOL, etc.) ---------------------------------
+if [ -z "${SITL_MODELS_DIR:-}" ] && [ -d "${ATLAS_WS}/src/SITL_Models/Gazebo" ]; then
+    export SITL_MODELS_DIR="${ATLAS_WS}/src/SITL_Models/Gazebo"
+fi
+
+# --- Paths do Gazebo ---------------------------------------------------------
+_atlas_gz_add() { [ -d "$1" ] && export GZ_SIM_RESOURCE_PATH="$1${GZ_SIM_RESOURCE_PATH:+:${GZ_SIM_RESOURCE_PATH}}"; }
+
+# Resolucao de package://<pkg>/... : o resolvedor procura <dir>/<pkg>/... , logo
+# precisa do diretorio PAI de 'ardupilot_gazebo/', nao de .../ardupilot_gazebo/models.
+# A branch ros2 do ardupilot_gazebo usa package://; os hooks do pacote poem
+# .../share/ardupilot_gazebo/models mas NAO o pai .../share -> juntamos aqui.
+if [ -n "${ATLAS_OVERLAY}" ]; then
+    _atlas_gz_add "${ATLAS_OVERLAY}/ardupilot_gazebo/share"
+    _atlas_gz_add "${ATLAS_OVERLAY}/SITL_Models/share"
+else
+    # workspace por compilar: o pai de ardupilot_gazebo/ e' o proprio src/
+    _atlas_gz_add "${ATLAS_WS}/src"
+    _atlas_gz_add "${ATLAS_WS}/src/ardupilot_gazebo/models"
+    _atlas_gz_add "${ATLAS_WS}/src/ardupilot_gazebo/worlds"
+    _atlas_gz_add "${ATLAS_WS}/src/SITL_Models/Gazebo/models"
+    _atlas_gz_add "${ATLAS_WS}/src/SITL_Models/Gazebo/worlds"
+    if [ -d "${ATLAS_WS}/src/ardupilot_gazebo/build" ]; then
+        export GZ_SIM_SYSTEM_PLUGIN_PATH="${ATLAS_WS}/src/ardupilot_gazebo/build${GZ_SIM_SYSTEM_PLUGIN_PATH:+:${GZ_SIM_SYSTEM_PLUGIN_PATH}}"
+    fi
+fi
+unset -f _atlas_gz_add
+
+# sdformat_urdf (robot_state_publisher / RViz) usa SDF_PATH, nao GZ_SIM_RESOURCE_PATH.
+[ -n "${GZ_SIM_RESOURCE_PATH:-}" ] && export SDF_PATH="${GZ_SIM_RESOURCE_PATH}"

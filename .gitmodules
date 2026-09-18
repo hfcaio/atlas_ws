@@ -1,0 +1,6 @@
+[submodule "src/mavros_library"]
+	path = src/mavros_library
+	url = git@github.com:AeroTec-ATLAS/mavros_library.git
+[submodule "src/icarus_tests"]
+	path = src/icarus_tests
+	url = git@github.com:AeroTec-ATLAS/icarus_tests.git

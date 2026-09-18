@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+# ap-sitl [copter|plane|vtol] [args extra para sim_vehicle.py]
+#
+# Usa o ArduPilot que o atlas-env escolheu ($ARDUPILOT_HOME):
+#   $ATLAS_WS/src/ardupilot  se existir, senao /opt/ardupilot (o da imagem).
+#
+# Env:
+#   HEADLESS=1     -> sem --map/--console
+#   NO_MAVPROXY=1  -> sem MAVProxy; MAVROS liga a tcp://127.0.0.1:5760
+#   WIPE=1         -> -w (apaga parametros guardados)
+#   INSTANCE=0     -> instancia SITL (multi-veiculo: 0,1,2...)
+#   LOCATION=CMAC  -> local de arranque (Tools/autotest/locations.txt)
+#   SPEEDUP=1      -> aceleracao da simulacao
+#   WAIT_GAZEBO=5  -> segundos de espera pelo Gazebo
+set -euo pipefail
+
+VEHICLE="${1:-${VEHICLE:-copter}}"
+shift || true
+
+: "${ARDUPILOT_HOME:=/opt/ardupilot}"
+INSTANCE="${INSTANCE:-0}"
+SPEEDUP="${SPEEDUP:-1}"
+MAVROS_PORT=$((14550 + INSTANCE * 10))
+GCS_PORT=$((14551 + INSTANCE * 10))
+
+ARGS=(--model JSON --speedup "${SPEEDUP}" -I "${INSTANCE}")
+
+case "${VEHICLE}" in
+  copter|iris)  ARGS=(-v ArduCopter -f gazebo-iris "${ARGS[@]}") ;;
+  plane|zephyr) ARGS=(-v ArduPlane -f gazebo-zephyr "${ARGS[@]}") ;;
+  vtol|quadplane|alti)
+    PARAM=""
+    for d in "${SITL_MODELS_DIR:-}" "${ATLAS_WS:-}/src/SITL_Models/Gazebo"; do
+      [ -n "$d" ] && [ -f "$d/config/alti_transition_quad.param" ] \
+        && PARAM="$d/config/alti_transition_quad.param" && break
+    done
+    if [ -z "${PARAM}" ]; then
+      echo "!! nao encontrei alti_transition_quad.param." >&2
+      echo "   O VTOL precisa do SITL_Models no workspace: corre 'atlas-ws-init'." >&2
+      exit 1
+    fi
+    ARGS=(-v ArduPlane "${ARGS[@]}" --add-param-file="${PARAM}")
+    ;;
+  *) echo "uso: ap-sitl [copter|plane|vtol] [args extra]" >&2; exit 1 ;;
+esac
+
+[ "${WIPE:-0}" = "1" ] && ARGS+=(-w)
+[ -n "${LOCATION:-}" ] && ARGS+=(-L "${LOCATION}")
+
+if [ "${NO_MAVPROXY:-0}" = "1" ]; then
+  ARGS+=(--no-mavproxy)      # MAVLink direto em tcp://127.0.0.1:5760
+else
+  ARGS+=(--out="udp:127.0.0.1:${MAVROS_PORT}" --out="udp:127.0.0.1:${GCS_PORT}")
+  [ "${HEADLESS:-0}" != "1" ] && ARGS+=(--map --console)
+fi
+
+WAIT_GAZEBO="${WAIT_GAZEBO:-5}"
+if [ "${WAIT_GAZEBO}" -gt 0 ]; then
+  echo ">> a aguardar ${WAIT_GAZEBO}s pelo Gazebo..."
+  sleep "${WAIT_GAZEBO}"
+fi
+
+echo ">> ArduPilot: ${ARDUPILOT_HOME}"
+echo ">> sim_vehicle.py ${ARGS[*]} $*"
+echo ">> MAVLink: MAVROS udp 127.0.0.1:${MAVROS_PORT} | GCS udp 127.0.0.1:${GCS_PORT}"
+cd "${ARDUPILOT_HOME}"
+exec sim_vehicle.py "${ARGS[@]}" "$@"

@@ -1,0 +1,86 @@
+# atlas-sim : ambiente ROS 2 Humble + Gazebo Harmonic + ArduPilot SITL + MAVROS
+#
+#   docker compose build
+#   xhost +local:docker
+#   docker compose run --rm dev            # shell: atlas-ws-init / atlas-deps / atlas-build
+#   VEHICLE=copter docker compose up       # gazebo + sitl + mavros
+#   docker compose down
+#
+# O workspace INTEIRO (src/ build_docker/ install_docker/) vem do host por volume.
+# network_mode: host -> 127.0.0.1 e o mesmo em todos os containers e no host.
+
+x-atlas: &atlas
+  image: atlas-sim:humble
+  build:
+    context: .
+    dockerfile: Dockerfile
+    args:
+      ARDUPILOT_REF: ${ARDUPILOT_REF:-master}
+      BUILD_ARDUPILOT: ${BUILD_ARDUPILOT:-1}
+      WAF_JOBS: ${WAF_JOBS:-4}
+      UID: ${UID:-1000}
+      GID: ${GID:-1000}
+  network_mode: host
+  ipc: host
+  privileged: true
+  working_dir: /home/ros/atlas_ws
+  environment:
+    - DISPLAY=${DISPLAY:-:0}
+    - QT_X11_NO_MITSHM=1
+    - ATLAS_WS=/home/ros/atlas_ws
+    - ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-0}
+    - GZ_VERSION=harmonic
+    - VEHICLE=${VEHICLE:-copter}
+    - HEADLESS=${HEADLESS:-0}
+    - LIBGL_ALWAYS_SOFTWARE=${LIBGL_ALWAYS_SOFTWARE:-0}
+  volumes:
+    - /tmp/.X11-unix:/tmp/.X11-unix:rw
+    - ${ATLAS_WS_HOST:-..}:/home/ros/atlas_ws
+    - ${HOME}/.ssh:/home/ros/.ssh:ro
+    - ap_ccache:/home/ros/.cache/ccache
+  stdin_open: true
+  tty: true
+
+services:
+
+  gazebo:
+    <<: *atlas
+    container_name: atlas_gazebo
+    command: ["ap-gazebo", "${VEHICLE:-copter}"]
+
+  sitl:
+    <<: *atlas
+    container_name: atlas_sitl
+    depends_on: [gazebo]
+    environment:
+      - DISPLAY=${DISPLAY:-:0}
+      - QT_X11_NO_MITSHM=1
+      - ATLAS_WS=/home/ros/atlas_ws
+      - ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-0}
+      - HEADLESS=${HEADLESS:-0}
+      - WAIT_GAZEBO=${WAIT_GAZEBO:-8}
+      - WIPE=${WIPE:-0}
+      - SPEEDUP=${SPEEDUP:-1}
+      - INSTANCE=${INSTANCE:-0}
+    command: ["ap-sitl", "${VEHICLE:-copter}"]
+
+  mavros:
+    <<: *atlas
+    container_name: atlas_mavros
+    depends_on: [sitl]
+    environment:
+      - ATLAS_WS=/home/ros/atlas_ws
+      - ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-0}
+      - FCU_URL=${FCU_URL:-udp://:14550@}
+      - GCS_URL=${GCS_URL:-}
+      - INSTANCE=${INSTANCE:-0}
+    command: ["bash", "-lc", "sleep ${MAVROS_DELAY:-15}; ap-mavros"]
+
+  dev:
+    <<: *atlas
+    container_name: atlas_dev
+    profiles: ["dev"]
+    command: ["bash"]
+
+volumes:
+  ap_ccache:

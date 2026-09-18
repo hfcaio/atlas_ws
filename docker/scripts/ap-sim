@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+# ap-sim [copter|plane|vtol]
+#
+# Sobe tudo num container so, em 3 painis tmux:
+#   Gazebo | ArduPilot SITL (MAVProxy) | MAVROS
+#
+# tmux: Ctrl-b <seta> muda de painel, Ctrl-b d sai deixando a correr.
+# Voltar: tmux attach -t sim | Matar: tmux kill-session -t sim
+set -euo pipefail
+
+VEHICLE="${1:-${VEHICLE:-copter}}"
+SESSION="${SESSION:-sim}"
+INSTANCE="${INSTANCE:-0}"
+
+if tmux has-session -t "${SESSION}" 2>/dev/null; then
+  echo ">> sessao '${SESSION}' ja existe, a ligar..."
+  exec tmux attach -t "${SESSION}"
+fi
+
+# NO_MAVPROXY=1 -> SITL sem MAVProxy (MAVLink cru em tcp 5760) e MAVROS liga
+# direto. Evita o MAVProxy colidir com o MAVROS no protocolo de missao
+# (MISSION_ACK: INVALID_SEQUENCE / Mission upload timeout).
+if [ "${NO_MAVPROXY:-0}" = "1" ]; then
+  SITL_ENV="NO_MAVPROXY=1 "
+  MAVROS_FCU="tcp://127.0.0.1:$((5760 + INSTANCE * 10))"
+else
+  SITL_ENV=""
+  MAVROS_FCU=""
+fi
+
+tmux new-session -d -s "${SESSION}" -n sim "ap-gazebo ${VEHICLE}; bash"
+tmux split-window -t "${SESSION}":0 -h "WAIT_GAZEBO=${WAIT_GAZEBO:-8} ${SITL_ENV}ap-sitl ${VEHICLE}; bash"
+tmux split-window -t "${SESSION}":0.1 -v "sleep ${MAVROS_DELAY:-14}; ap-mavros ${MAVROS_FCU}; bash"
+tmux select-layout -t "${SESSION}":0 tiled
+tmux select-pane -t "${SESSION}":0.1
+
+exec tmux attach -t "${SESSION}"

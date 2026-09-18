@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+# atlas-build : colcon build do workspace, em pastas separadas das do host.
+#
+# Porque separadas: o install space do colcon guarda caminhos absolutos. No host
+# o workspace esta em /home/<tu>/... e no container em /home/ros/atlas_ws, entao
+# partilhar build/ e install/ parte os dois lados. Aqui usamos:
+#   build_docker/  install_docker/  log_docker/
+# e o atlas-env faz source do install_docker automaticamente.
+#
+# Uso:
+#   atlas-build                                  # tudo
+#   atlas-build --packages-select atlas_mission  # so um pacote
+#   atlas-build --packages-up-to ardupilot_gz_bringup
+#
+# Env:
+#   MERGE_INSTALL=1   usa --merge-install
+#   NO_SYMLINK=1      desliga o --symlink-install
+set -euo pipefail
+
+: "${ATLAS_WS:=/home/ros/atlas_ws}"
+cd "${ATLAS_WS}"
+
+# os setup.bash do ROS/overlays nao sao 'set -u' clean -> desliga o -u ao sourcear
+set +u
+source /opt/ros/humble/setup.bash
+[ -f /opt/mavros_ws/install/setup.bash ] && source /opt/mavros_ws/install/setup.bash
+set -u
+export GZ_VERSION="${GZ_VERSION:-harmonic}"
+
+# Limita a paralelizacao para nao travar a maquina (default 4). Afeta o colcon
+# (--parallel-workers), os sub-makes (MAKEFLAGS) e o waf do ardupilot_sitl.
+JOBS="${JOBS:-4}"
+export MAKEFLAGS="-j${JOBS}"
+
+ARGS=(--build-base build_docker --install-base install_docker --parallel-workers "${JOBS}")
+[ "${NO_SYMLINK:-0}" = "1" ] || ARGS+=(--symlink-install)
+[ "${MERGE_INSTALL:-0}" = "1" ] && ARGS+=(--merge-install)
+
+echo ">> colcon build ${ARGS[*]} $* (JOBS=${JOBS})"
+colcon --log-base log_docker build "${ARGS[@]}" \
+  --cmake-args -DCMAKE_BUILD_TYPE=RelWithDebInfo "-DARDUPILOT_WAF_BUILD_ARGS=-j${JOBS}" \
+  "$@" 2>&1 | tee -a /tmp/atlas-build.log
+
+echo
+echo ">> feito. Para usar nesta shell:  source ${ATLAS_WS}/install_docker/setup.bash"
+echo "   (shells novas ja fazem isto sozinhas via atlas-env)"

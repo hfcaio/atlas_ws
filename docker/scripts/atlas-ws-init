@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+# atlas-ws-init : garante que o $ATLAS_WS/src tem os repos de simulacao.
+#
+# Nao toca no que ja existir. So clona o que faltar:
+#   ardupilot        (traz tambem Tools/ros2 -> ardupilot_sitl, ardupilot_msgs)
+#   ardupilot_gazebo (plugin + modelos iris/zephyr)
+#   ardupilot_gz     (launch files ROS 2)
+#   SITL_Models      (modelos extra, inclui o quadplane VTOL)
+#
+# Alternativa oficial equivalente:
+#   cd $ATLAS_WS && vcs import --input \
+#     https://raw.githubusercontent.com/ArduPilot/ardupilot_gz/main/ros2_gz.repos \
+#     --recursive src
+set -euo pipefail
+
+: "${ATLAS_WS:=/home/ros/atlas_ws}"
+SRC="${ATLAS_WS}/src"
+mkdir -p "${SRC}"
+
+clone() {  # clone <dir> <url> [--recurse]
+  local dir="$1" url="$2" extra="${3:-}"
+  if [ -d "${SRC}/${dir}" ]; then
+    echo "  [skip] ${dir} ja existe"
+  else
+    echo "  [clone] ${dir}"
+    # shellcheck disable=SC2086
+    git clone --depth 1 ${extra} "${url}" "${SRC}/${dir}"
+  fi
+}
+
+echo ">> workspace: ${ATLAS_WS}"
+clone ardupilot        https://github.com/ArduPilot/ardupilot.git "--recurse-submodules --shallow-submodules"
+clone ardupilot_gazebo https://github.com/ArduPilot/ardupilot_gazebo.git
+clone ardupilot_gz     https://github.com/ArduPilot/ardupilot_gz.git
+
+if [ ! -d "${SRC}/SITL_Models" ]; then
+  echo "  [clone] SITL_Models (so a pasta Gazebo)"
+  git clone --depth 1 --filter=blob:none --sparse \
+    https://github.com/ArduPilot/SITL_Models.git "${SRC}/SITL_Models"
+  git -C "${SRC}/SITL_Models" sparse-checkout set Gazebo
+else
+  echo "  [skip] SITL_Models ja existe"
+fi
+
+echo
+echo ">> proximo passo:"
+echo "   atlas-deps     # rosdep install"
+echo "   atlas-build    # colcon build"

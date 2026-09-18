@@ -1,0 +1,32 @@
+#!/bin/bash
+
+# Exit on error
+set -e
+
+echo "Removing ROS 2 Humble..."
+sudo apt remove --purge -y ros-humble-desktop ros-dev-tools
+
+# Uncomment below if ros-base was installed
+# sudo apt remove --purge -y ros-humble-ros-base
+
+# Remove ROS 2 repository
+sudo rm -f /etc/apt/sources.list.d/ros2.list
+sudo rm -f /usr/share/keyrings/ros-archive-keyring.gpg
+
+# Remove locales
+sudo apt remove --purge -y locales
+sudo update-locale LC_ALL=C LANG=C
+export LANG=C
+
+# Remove software properties and curl
+sudo apt remove --purge -y software-properties-common curl
+
+# Clean up leftover dependencies
+sudo apt autoremove -y
+sudo apt autoclean -y
+
+# Remove ROS environment setup from .bashrc
+sed -i '/source \/opt\/ros\/humble\/setup.bash/d' ~/.bashrc
+
+# Final message
+echo "ROS 2 Humble and related components have been completely removed!"

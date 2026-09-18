@@ -1,0 +1,56 @@
+diff --git a/ardupilot_gz_bringup/launch/robots/robot.launch.py b/ardupilot_gz_bringup/launch/robots/robot.launch.py
+index 8644489..f93587f 100644
+--- a/ardupilot_gz_bringup/launch/robots/robot.launch.py
++++ b/ardupilot_gz_bringup/launch/robots/robot.launch.py
+@@ -14,6 +14,8 @@
+ # along with this program. If not, see <https://www.gnu.org/licenses/>.
+ 
+ import os
++import re
++import subprocess
+ import tempfile
+ from typing import List
+ 
+@@ -80,8 +82,8 @@ def launch_spawn_robot(context: LaunchContext) -> List[LaunchDescriptionEntity]:
+             "",
+             "-name",
+             name,
+-            "-topic",
+-            "robot_description",
++            "-file",
++            LaunchConfiguration("sdf_file"),
+             "-x",
+             pos_x,
+             "-y",
+@@ -122,6 +124,22 @@ def launch_state_pub_with_bridge(
+         "<fdm_port_in>9002</fdm_port_in>", f"<fdm_port_in>{control_port}</fdm_port_in>"
+     )
+ 
++    # robot_state_publisher (RViz TF) parses the SDF via sdformat_urdf, which
++    # chokes on ArduPilot sensor types. Sensors aren't needed for the kinematic
++    # tree. They live in nested <include> models, so flatten the model with
++    # `gz sdf -p` and strip every <sensor> block. Gazebo still spawns the full
++    # model (with sensors) via `create -file`, so flight is unaffected.
++    try:
++        flat = subprocess.run(
++            ["gz", "sdf", "-p", sdf_file],
++            capture_output=True,
++            text=True,
++            timeout=30,
++        ).stdout
++    except Exception:
++        flat = ""
++    rsp_desc = re.sub(r"<sensor[\s\S]*?</sensor>", "", flat if flat.strip() else robot_desc)
++
+     # Publish /tf and /tf_static.
+     robot_state_publisher = Node(
+         package="robot_state_publisher",
+@@ -129,7 +147,7 @@ def launch_state_pub_with_bridge(
+         namespace=namespace,
+         output="both",
+         parameters=[
+-            {"robot_description": robot_desc},
++            {"robot_description": rsp_desc},
+             {"frame_prefix": ""},
+         ],
+         remappings=[

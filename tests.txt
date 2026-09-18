@@ -1,0 +1,149 @@
+# ROS 2 & ArduPilot Installation Test Script
+
+## 1. Test ROS 2 Installation
+
+### Terminal 1: Run a C++ Talker Node
+```bash
+source /opt/ros/humble/setup.bash
+ros2 run demo_nodes_cpp talker
+```
+
+### Terminal 2: Run a Python Listener Node
+```bash
+source /opt/ros/humble/setup.bash
+ros2 run demo_nodes_py listener
+```
+
+If ROS 2 is correctly installed, the listener should receive messages from the talker.
+
+---
+
+## 2. Test TurtleBot3 Installation
+
+### Build TurtleBot3 Workspace
+```bash
+cd ~/turtlebot3_ws
+colcon build --symlink-install
+```
+
+### Launch TurtleBot3 in an Empty Gazebo World
+```bash
+export TURTLEBOT3_MODEL=burger
+ros2 launch turtlebot3_gazebo empty_world.launch.py
+```
+
+### Run Teleoperation
+```bash
+ros2 run turtlebot3_teleop teleop_keyboard
+```
+
+Use keyboard inputs to control the TurtleBot3 in the simulation.
+
+---
+
+## 3. Test QGroundControl
+```bash
+cd ~
+./QGroundControl.AppImage
+```
+Ensure that QGroundControl opens without errors.
+
+---
+
+## 4. Test ArduPilot SITL (Software In The Loop) Simulation
+
+### Start SITL with Default Configuration
+```bash
+cd ~/ardupilot/ArduCopter
+sim_vehicle.py --console --map -w
+```
+
+### Alternative: Start SITL from ArduPilot Base Directory
+```bash
+cd ~/ardupilot
+sim_vehicle.py -v copter --console --map -w
+```
+
+Ensure the console and map windows appear correctly.
+
+---
+
+## 5. Test Micro XRCE-DDS-Gen Installation
+```bash
+source ~/.bashrc
+microxrceddsgen -help
+```
+If installed correctly, this should display the available commands.
+
+---
+
+## 6. Test ArduPilot ROS 2 Integration
+
+### Run ArduPilot ROS 2 Tests
+```bash
+cd ~/ardu_ws
+source ./install/setup.bash
+colcon test --executor sequential --parallel-workers 0 --base-paths src/ardupilot --event-handlers=console_cohesion+
+colcon test-result --all --verbose
+```
+
+---
+
+## 7. Test ROS 2 with SITL
+
+### Build ArduPilot SITL Package
+```bash
+source /opt/ros/humble/setup.bash
+cd ~/ardu_ws/
+colcon build --packages-up-to ardupilot_sitl
+source install/setup.bash
+```
+
+### Launch SITL with ROS 2
+```bash
+ros2 launch ardupilot_sitl sitl_dds_udp.launch.py transport:=udp4 synthetic_clock:=True wipe:=False model:=quad speedup:=1 slave:=0 instance:=0 defaults:=$(ros2 pkg prefix ardupilot_sitl)/share/ardupilot_sitl/config/default_params/copter.parm,$(ros2 pkg prefix ardupilot_sitl)/share/ardupilot_sitl/config/default_params/dds_udp.parm sim_address:=127.0.0.1 master:=tcp:127.0.0.1:5760 sitl:=127.0.0.1:5501
+```
+
+### Check Running ROS 2 Nodes
+```bash
+source ~/ardu_ws/install/setup.bash
+ros2 node list
+```
+Ensure the expected nodes are listed.
+
+---
+
+## 8. Build and Run Tests for ArduPilot Gazebo Integration
+
+### Build the Required Packages
+```bash
+cd ~/ardu_ws
+colcon build --packages-up-to ardupilot_gz_bringup
+```
+
+### Run ArduPilot Gazebo Tests
+```bash
+cd ~/ardu_ws
+source install/setup.bash
+colcon test --packages-select ardupilot_sitl ardupilot_dds_tests ardupilot_gazebo ardupilot_gz_applications ardupilot_gz_description ardupilot_gz_gazebo ardupilot_gz_bringup
+colcon test-result --all --verbose
+```
+
+---
+
+## 9. Run a Gazebo Simulation with ArduPilot
+```bash
+source install/setup.bash
+ros2 launch ardupilot_gz_bringup iris_runway.launch.py
+```
+Ensure that the Iris drone model loads correctly in Gazebo.
+
+---
+
+### Notes:
+- Ensure that all dependencies are installed before running these tests.
+- If any test fails, check the error logs for missing dependencies or incorrect configurations.
+- Use `ros2 topic list` and `ros2 node list` to debug issues with ROS 2 topics and nodes.
+
+This test script verifies the correct installation and configuration of ROS 2 Humble, TurtleBot3, ArduPilot, and Gazebo.
+

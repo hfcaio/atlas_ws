@@ -1,0 +1,7 @@
+# O build context e' so a pasta docker/ (Dockerfile + scripts + entrypoint).
+# Nada de workspace entra na imagem — ela e' so ambiente.
+**/__pycache__
+**/*.pyc
+.env
+README.md
+CLAUDE.atlas-sim.md
