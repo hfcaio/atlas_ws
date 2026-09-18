@@ -82,9 +82,3 @@ recente de cada um: `git submodule update --remote src/mavros_library`.
 **Regra:** só editamos `atlas_mission`, `atlas_bringup`, `mavros_library` e `icarus_tests`.
 Os quatro repos upstream são dependências — correções entram como configuração do nosso lado
 ou como patch documentado em `docker/patches/`, nunca edição direta.
-
-## O que NÃO vai para o git
-
-Ficam de fora (ver [`.gitignore`](.gitignore)): os repos upstream em `src/`, os espaços
-`build*/ install*/ log*/`, logs de voo (`*.BIN`, `*.tlog`), core dumps e `docker/.env`.
-Só se versiona o nosso código (~10 MB) — o resto é regenerável com `atlas-ws-init` + `atlas-build`.
