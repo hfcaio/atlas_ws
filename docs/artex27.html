@@ -1,0 +1,1246 @@
+<!doctype html>
+<html lang="pt">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Missão ARTEX — subida a 2000 m com gradiente ≤ 10 %</title>
+<style>
+  :root {
+    --ground: #0d1620;
+    --ground-2: #0f1b27;
+    --panel: #142433;
+    --panel-2: #182c3d;
+    --line: #24384c;
+    --line-soft: #1c2d3e;
+    --ink: #e8eef4;
+    --ink-dim: #9fb2c4;
+    --ink-faint: #6a7f92;
+    --signal: #f2a63b;
+    --ok: #46c9a8;
+    --crit: #e5605e;
+    --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background:
+      radial-gradient(1100px 560px at 82% -8%, rgba(242,166,59,0.06), transparent 60%),
+      var(--ground);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 16.5px;
+    line-height: 1.62;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--signal); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  .layout {
+    max-width: 1140px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 232px 1fr;
+    gap: clamp(1.5rem, 4vw, 3.2rem);
+    padding: clamp(1.4rem, 4vw, 3rem) 1.25rem 5rem;
+    align-items: start;
+  }
+
+  /* ---------- sidebar TOC ---------- */
+  nav.toc {
+    position: sticky;
+    top: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    font-size: 0.9rem;
+  }
+  nav.toc .brand {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    padding: 0 0.6rem 0.7rem;
+  }
+  nav.toc .brand b { color: var(--signal); }
+  nav.toc a {
+    color: var(--ink-dim);
+    padding: 0.34rem 0.6rem;
+    border-radius: 7px;
+    border-left: 2px solid transparent;
+  }
+  nav.toc a:hover { color: var(--ink); background: rgba(255,255,255,0.03); text-decoration: none; }
+  nav.toc a.active { color: var(--ink); border-left-color: var(--signal); background: rgba(242,166,59,0.07); }
+
+  main { min-width: 0; display: flex; flex-direction: column; gap: clamp(2.2rem, 5vw, 3rem); }
+
+  /* ---------- header ---------- */
+  header.hero { display: flex; flex-direction: column; gap: 0.9rem; }
+  .eyebrow {
+    font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--ink-faint); display: flex; flex-wrap: wrap; gap: 0.4rem 0.9rem;
+  }
+  .eyebrow .dot { color: var(--signal); }
+  h1 {
+    font-size: clamp(1.9rem, 5vw, 2.6rem); line-height: 1.06; letter-spacing: -0.02em;
+    margin: 0; font-weight: 650; text-wrap: balance;
+  }
+  h1 .accent { color: var(--signal); }
+  .lede { font-size: clamp(1.02rem, 2.3vw, 1.16rem); color: var(--ink-dim); max-width: 62ch; margin: 0; }
+
+  /* ---------- sections ---------- */
+  section { display: flex; flex-direction: column; gap: 1rem; scroll-margin-top: 1.5rem; }
+  h2 {
+    font-size: clamp(1.25rem, 3vw, 1.5rem); margin: 0; font-weight: 640; letter-spacing: -0.01em;
+    padding-bottom: 0.5rem; border-bottom: 1px solid var(--line); text-wrap: balance;
+  }
+  h3 { margin: 0.4rem 0 0; font-size: 1.02rem; font-weight: 620; }
+  p { margin: 0; }
+  p + p { margin-top: 0.6rem; }
+  .muted { color: var(--ink-dim); }
+  strong.hi { color: var(--ink); font-weight: 640; }
+  ul { margin: 0; padding-left: 1.2rem; color: var(--ink-dim); display: flex; flex-direction: column; gap: 0.35rem; }
+  li::marker { color: var(--ink-faint); }
+
+  code {
+    font-family: var(--mono); font-size: 0.85em; background: rgba(255,255,255,0.05);
+    border: 1px solid var(--line-soft); border-radius: 5px; padding: 0.06em 0.36em; color: #f0d9b3;
+  }
+  .label {
+    font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--signal);
+  }
+
+  pre {
+    margin: 0; overflow-x: auto; border: 1px solid var(--line); border-radius: 11px; background: #0a1119;
+    padding: 1rem 1.1rem; font-family: var(--mono); font-size: 0.82rem; line-height: 1.7; color: var(--ink);
+  }
+  pre code { background: none; border: none; padding: 0; color: inherit; font-size: 1em; }
+  pre .c { color: var(--ink-faint); }
+  pre .k { color: var(--signal); }
+  pre .s { color: var(--ok); }
+
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.9rem; }
+  @media (max-width: 680px) { .grid2 { grid-template-columns: 1fr; } }
+
+  .card {
+    border: 1px solid var(--line); border-radius: 12px; background: var(--panel);
+    padding: 1rem 1.1rem; display: flex; flex-direction: column; gap: 0.5rem;
+  }
+  .card .k { font-family: var(--mono); font-size: 0.8rem; color: var(--signal); }
+
+  /* ---------- tables ---------- */
+  .tablewrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 11px; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.88rem; min-width: 480px; }
+  thead th {
+    font-family: var(--mono); font-size: 0.66rem; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--ink-faint); text-align: left; font-weight: 500; padding: 0.65rem 0.9rem;
+    background: var(--ground-2); border-bottom: 1px solid var(--line);
+  }
+  tbody td { padding: 0.6rem 0.9rem; border-bottom: 1px solid var(--line-soft); vertical-align: top; }
+  tbody tr:last-child td { border-bottom: none; }
+  td.mono, .mono { font-family: var(--mono); }
+  td.m { font-family: var(--mono); font-size: 0.8rem; color: var(--ink); white-space: nowrap; }
+  td.d { color: var(--ink-dim); }
+
+  .callout {
+    border: 1px solid var(--line); border-left: 2px solid var(--signal);
+    border-radius: 10px; background: rgba(242,166,59,0.05); padding: 0.9rem 1.1rem;
+    color: var(--ink-dim); font-size: 0.95rem;
+  }
+  .callout.warn { border-left-color: var(--crit); background: rgba(229,96,94,0.06); }
+  .callout strong { color: var(--ink); font-weight: 640; }
+
+  .pill {
+    display: inline-block; font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.08em;
+    padding: 0.08rem 0.4rem; border-radius: 4px; vertical-align: 0.1em; font-weight: 700;
+  }
+  .pill.sub { background: rgba(70,201,168,0.15); color: var(--ok); }
+  .pill.pub { background: rgba(242,166,59,0.15); color: var(--signal); }
+
+  footer {
+    grid-column: 1 / -1; border-top: 1px solid var(--line); margin-top: 1rem; padding-top: 1.3rem;
+    font-family: var(--mono); font-size: 0.73rem; color: var(--ink-faint);
+    display: flex; flex-wrap: wrap; gap: 0.4rem 1rem; justify-content: space-between;
+  }
+
+  @media (max-width: 820px) {
+    .layout { grid-template-columns: 1fr; }
+    nav.toc { position: static; flex-direction: row; flex-wrap: wrap; gap: 0.3rem;
+      border-bottom: 1px solid var(--line); padding-bottom: 1rem; }
+    nav.toc .brand { width: 100%; padding-bottom: 0.4rem; }
+    nav.toc a { border-left: none; border-bottom: 2px solid transparent; }
+    nav.toc a.active { border-left: none; border-bottom-color: var(--signal); }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+  <nav class="toc" aria-label="Índice">
+    <span class="brand">ATLAS · <b>artex27</b> mission</span>
+    <a href="#missao">A missão e os 10 %</a>
+    <a href="#geografia">Geografia &amp; espaço aéreo</a>
+    <a href="#perfil">Perfil de subida e descida</a>
+    <a href="#estrutura">Estrutura da missão</a>
+    <a href="#parametros">Parâmetros</a>
+    <a href="#correr">Como correr</a>
+    <a href="#sitl">SITL de ponta a ponta</a>
+    <a href="#gcs">Carregar nas GCS</a>
+    <a href="#checklist">Checklist de pré-voo</a>
+    <a href="#riscos">Riscos &amp; pendências</a>
+    <a href="#ficheiros">Ficheiros</a>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <div class="eyebrow">
+        <span><span class="dot">●</span> ATLAS</span>
+        <span>ARTEX 26 · Portugal</span>
+        <span>ArduPlane 4.8 · ROS 2 Humble · MAVROS</span>
+      </div>
+      <h1>Missão <span class="accent">ARTEX</span> — subida a 2000 m com gradiente ≤ 10 %</h1>
+      <p class="lede">
+        Como o pacote <code>artex27</code> leva um avião de asa fixa de 100 m a 2000 m acima da
+        pista sem nunca passar de 10 % de gradiente sobre o solo, dentro de um círculo de
+        997 m de raio, e como o traz de volta — nominalmente à mão, em failsafe sozinho.
+      </p>
+    </header>
+
+    <!-- ================================================================= -->
+    <section id="missao">
+      <span class="label">Visão geral</span>
+      <h2>A missão e o requisito dos 10 %</h2>
+      <p class="muted">
+        O exercício ARTEX 26 exige que o avião suba até <strong class="hi">2000 m acima do ponto
+        de descolagem</strong> com um <strong class="hi">gradiente máximo de 10 %</strong> sobre o
+        solo — 10 m de subida por cada 100 m percorridos, ou seja ~5,7° de trajetória. A descolagem
+        é <strong class="hi">manual</strong>: o piloto descola, sobe até ~100 m sobre a pista e só
+        então passa para AUTO.
+      </p>
+
+      <div class="grid2">
+        <div class="card">
+          <span class="k">O problema</span>
+          <p class="muted">
+            A 14–15 m/s, subir 1900 m a 10 % precisa de <strong class="hi">~19 km</strong> de
+            distância horizontal. A área autorizada tem <strong class="hi">997 m</strong> de raio.
+            Não cabe em linha reta.
+          </p>
+        </div>
+        <div class="card">
+          <span class="k">A solução</span>
+          <p class="muted">
+            Uma <strong class="hi">espiral</strong> de 9 <code>LOITER_TO_ALT</code> empilhados no
+            mesmo lat/lon, no centro do círculo. O avião dá ~13 voltas de 400 m de raio e sobe
+            200–250 m em cada degrau.
+          </p>
+        </div>
+      </div>
+
+      <div class="callout">
+        <strong>Numa espiral, os waypoints não controlam o gradiente.</strong> O
+        <code>LOITER_TO_ALT</code> não impõe rampa nenhuma — o avião sobe à razão que o TECS
+        permitir. Quem fixa o gradiente é portanto <strong>um único parâmetro</strong>:
+        <code>TECS_CLMB_MAX</code>. Os ficheiros de missão estão corretos para qualquer valor dele.
+      </div>
+
+      <h3>A fórmula</h3>
+      <pre><code><span class="c"># gradiente = razão de subida ÷ velocidade sobre o solo</span>
+TECS_CLMB_MAX = 0.08 × (AIRSPEED_CRUISE − vento_de_frente)
+              = 0.08 × (15 − 5) = <span class="k">0.80 m/s</span>   <span class="c"># gradiente 8,0 %</span></code></pre>
+      <p class="muted">
+        O fator é <strong class="hi">0,08 e não 0,10</strong>: deixa 20 % de margem sobre o limite,
+        para erro de estimativa de vento e para rajadas. O vento entra porque o gradiente se mede
+        contra o <em>solo</em>, e com vento de frente a velocidade sobre o solo cai — e o vento a
+        2000 m é tipicamente mais forte que à superfície.
+      </p>
+
+      <div class="callout warn">
+        <strong><code>TECS_CLMB_MAX</code> é um valor de dia de voo.</strong> Define-se a partir
+        da previsão de vento em altitude, não fica fixo no ficheiro. A fórmula auto-ajusta-se: o
+        gradiente resultante é sempre 8,0 %, muda é o tempo de subida.
+      </div>
+
+      <h3>Porque não limitar pelo pitch</h3>
+      <p class="muted">
+        A tentação é pôr <code>PTCH_LIM_MAX_DEG</code> a 6–7° como barreira secundária.
+        <strong class="hi">É inseguro.</strong> Pitch = trajetória + ângulo de ataque; para 5,7° de
+        trajetória e um AoA de trim plausível de 3–5° a 15 m/s, o pitch necessário é 8,7–10,7°. Um
+        teto de 6–7° fica <em>abaixo do pitch necessário para sequer manter a subida pedida</em>: o
+        pitch satura, o erro de altitude persiste, e a energia que o laço de acelerador continua a
+        injetar vai toda para velocidade. Além disso corta o flare da aterragem automática
+        (<code>TECS_LAND_PMAX</code> = 10° fica inerte) e limita a subida manual em FBWA.
+      </p>
+      <p class="muted">
+        O parâmetro certo para esse fim é <code>TECS_PITCH_MAX = 10</code>, que só atua em modos de
+        acelerador automático e é explicitamente substituído pelo <code>TECS_LAND_PMAX</code>
+        durante o flare. A barreira primária continua a ser o <code>TECS_CLMB_MAX</code>, que limita
+        a grandeza certa: a <em>razão de subida</em>.
+      </p>
+    </section>
+
+    <!-- ================================================================= -->
+    <section id="geografia">
+      <span class="label">Onde</span>
+      <h2>Geografia e espaço aéreo</h2>
+      <p class="muted">
+        Tudo extraído do <code>ARTEX 26 Geo v173.kml</code> (440 placemarks) com
+        <code>tools/extract_kml.py</code>. O círculo da área UAS foi ajustado por mínimos quadrados:
+        resíduo máximo <strong class="hi">0,017 m</strong> — é um círculo exato no KML.
+      </p>
+
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Feature</th><th>Geometria</th><th>Teto</th></tr></thead>
+          <tbody>
+            <tr><td><strong class="hi">UAS TO/LD Area 11 TF</strong></td><td class="m">círculo · 39.4054608, −8.2937285 · r = 997,25 m</td><td class="m">3000 m AMSL</td></tr>
+            <tr><td>Pista (placemark ponto)</td><td class="m">39.3993570, −8.2864182</td><td class="d">—</td></tr>
+            <tr><td>Pista → centro do círculo</td><td class="m">925,8 m · azimute 137,2°</td><td class="d">folga até à borda: <strong class="hi">71,5 m</strong></td></tr>
+            <tr><td>LP-D25 (espaço segregado)</td><td class="m">quadrilátero 17,2 × 13,9 km</td><td class="m">4267 m AMSL</td></tr>
+            <tr><td>LP-TRA56</td><td class="m">polígono a oeste</td><td class="m">3000 m AMSL</td></tr>
+            <tr><td><strong class="hi">Med-Hi Boundary</strong></td><td class="m">mesma planta do LP-D25</td><td class="m">1371 m AMSL</td></tr>
+            <tr><td>Lo-Med Boundary</td><td class="m">mesma planta do LP-D25</td><td class="m">610 m AMSL</td></tr>
+            <tr><td>A98 v2 Certification Box</td><td class="m">pentágono ~1,4 km</td><td class="m">1000 m AMSL</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout warn">
+        <strong>2000 m acima da pista fica acima da Med-Hi Boundary (1371 m AMSL).</strong>
+        Isso põe a missão na camada <em>Hi</em> e <strong>exige coordenação com o Air Ops
+        Control</strong>. É item de coordenação, não bloqueio — mas tem de estar fechado antes do voo.
+      </div>
+
+      <h3>A pista está colada à borda</h3>
+      <p class="muted">
+        Com 925,8 m do centro e 997,25 m de raio, sobram <strong class="hi">71,5 m</strong>.
+        Qualquer aproximação final que venha "de fora" sai da área autorizada. Por isso o eixo de
+        aproximação escolhido é <strong class="hi">137,2° / 317,2°</strong>: o avião entra na final
+        vindo do <em>centro</em> do círculo em direção à pista, e toda a aproximação fica contida.
+      </p>
+      <div class="callout warn">
+        <strong>137,2° não é o QFU real da pista.</strong> O KML só traz a pista como um ponto,
+        sem eixo. É uma escolha geométrica. Quando souberem a direção real e o vento:
+        <code>ros2 launch artex27 artex_mission.launch.py approach_brg:=&lt;QFU&gt;</code> — e
+        verificar que a porta de entrada da final (1600 m antes do toque) continua a cair dentro do
+        círculo. Só há <strong>~1900 m de reta utilizável</strong> dentro da área, e noutra direção
+        que não a 137,2° pode ser bem menos.
+      </div>
+
+      <h3>Margem de contenção</h3>
+      <p class="muted">
+        O raio de loiter comandado é 400 m, mas com <code>NAVL1_LIM_BANK = 0</code> o ArduPlane
+        devolve <code>raio × EAS2TAS²</code> — o círculo <strong class="hi">cresce com a
+        altitude</strong>. A 2000 m são ×1,22, ou seja ~487 m reais. Contra os 997 m da área sobram
+        <strong class="hi">~510 m</strong> de folga. O ponto mais exposto da missão não é a espiral:
+        é o próprio HOME/LAND, a 71,5 m da borda.
+      </p>
+    </section>
+
+    <!-- ================================================================= -->
+    <section id="perfil">
+      <span class="label">Quanto tempo</span>
+      <h2>Perfil de subida e descida</h2>
+      <p class="muted">
+        Premissas: <code>AIRSPEED_CRUISE = 15 m/s</code>, entrada em AUTO a 100 m sobre a pista,
+        raio comandado de 400 m. Todos estes números saem de
+        <code>python3 -m artex27.profile</code>.
+      </p>
+
+      <h3>Tabela de vento — a que manda</h3>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Vento de frente</th><th>0 m/s</th><th>2 m/s</th><th>5 m/s</th><th>7 m/s</th><th>8 m/s</th><th>10 m/s</th></tr></thead>
+          <tbody>
+            <tr><td><code>TECS_CLMB_MAX</code></td><td class="m">1.20</td><td class="m">1.04</td><td class="m"><strong class="hi">0.80</strong></td><td class="m">0.64</td><td class="m">0.56</td><td class="m">0.40</td></tr>
+            <tr><td>Gradiente</td><td class="m">8,0 %</td><td class="m">8,0 %</td><td class="m">8,0 %</td><td class="m">8,0 %</td><td class="m">8,0 %</td><td class="m">8,0 %</td></tr>
+            <tr><td>Subida 100 → 2000 m</td><td class="m">26,4′</td><td class="m">30,4′</td><td class="m"><strong class="hi">39,6′</strong></td><td class="m">49,5′</td><td class="m">56,5′</td><td class="m">79,2′</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout warn">
+        <strong>Com vento ≥ 10 m/s a subida sozinha leva 79 min</strong> — acima de qualquer janela
+        de autonomia plausível. A missão fica impossível independentemente do consumo. Existe um
+        <strong>teto de vento operacional</strong>, e ele é critério de GO/NO-GO.
+      </div>
+
+      <h3>Números com o vento de projeto (5 m/s)</h3>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th></th><th>Subida</th><th>Descida</th></tr></thead>
+          <tbody>
+            <tr><td>Parâmetro que manda</td><td class="m">TECS_CLMB_MAX = 0.80</td><td class="m">TECS_SINK_MAX = 1.00</td></tr>
+            <tr><td>Troço</td><td class="m">100 → 2000 m</td><td class="m">2000 → 140 m</td></tr>
+            <tr><td>Gradiente</td><td class="m">8,0 %</td><td class="m">10,0 %</td></tr>
+            <tr><td>Tempo</td><td class="m"><strong class="hi">39,6 min</strong></td><td class="m"><strong class="hi">31,0 min</strong></td></tr>
+            <tr><td>Voltas</td><td class="m">≈ 13,5</td><td class="m">≈ 10,5</td></tr>
+            <tr><td>Distância percorrida</td><td class="m">37,5 km</td><td class="m">29,4 km</td></tr>
+            <tr><td>Degraus <code>LOITER_TO_ALT</code></td><td class="m">9 (7 × 200 m + 2 × 250 m)</td><td class="m">4 (1500/1000/500/140)</td></tr>
+            <tr><td>Raio efetivo máximo</td><td class="m">481 m</td><td class="m">475 m</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout warn">
+        <strong>~70 minutos só para subir e descer</strong>, antes de qualquer missão a 2000 m.
+        Com <code>BATT_LOW_MAH = 8100</code> há 18 900 mAh utilizáveis antes do RTL; a 20 A isso
+        dá 56,7 min — <strong>não chega</strong>. Ver <a href="#riscos">Riscos</a>.
+      </div>
+
+      <h3>Porque é que a descida é tão lenta</h3>
+      <p class="muted">
+        Porque o utilizador decidiu aplicar os <strong class="hi">10 % também à descida</strong>:
+        <code>TECS_SINK_MAX = 0,10 × (15 − 5) = 1,0 m/s</code>. Uma descida a 3 m/s levaria 10 min
+        em vez de 31, mas a 20 % de gradiente. <strong>Se o requisito ARTEX dos 10 % for só de
+        subida, confirmar com a organização</strong> — são 20 minutos de autonomia em jogo.
+      </p>
+      <p class="muted">
+        A descida também tem de ser voada em espiral: a 1 m/s e 15 m/s, uma descida direta de
+        2000 m percorreria 30 km, muito para lá do círculo de 997 m.
+      </p>
+    </section>
+
+    <!-- ================================================================= -->
+    <section id="estrutura">
+      <span class="label">O plano</span>
+      <h2>Estrutura da missão — 21 itens</h2>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>#</th><th>Comando</th><th>Posição</th><th>Alt rel</th><th>Nota</th></tr></thead>
+          <tbody>
+            <tr><td class="m">0</td><td class="m">WAYPOINT (HOME)</td><td class="d">pista</td><td class="m">0 AMSL</td><td class="d">frame 0; o ArduPilot reescreve-o no arme</td></tr>
+            <tr><td class="m">1–9</td><td class="m">LOITER_TO_ALT</td><td class="d">centro UAS</td><td class="m">300…2000</td><td class="d">espiral de subida, <code>param2 = 400</code></td></tr>
+            <tr><td class="m">10–11</td><td class="m">WAYPOINT</td><td class="d">500 m do centro</td><td class="m">2000</td><td class="d"><strong class="hi">PLACEHOLDER</strong> da missão principal</td></tr>
+            <tr><td class="m">12</td><td class="m">DO_RETURN_PATH_START</td><td class="d">— (0,0)</td><td class="d">—</td><td class="d">cmd <strong class="hi">188</strong></td></tr>
+            <tr><td class="m">13–16</td><td class="m">LOITER_TO_ALT</td><td class="d">centro UAS</td><td class="m">1500…140</td><td class="d">espiral de descida; o último com <code>param4 = 1</code></td></tr>
+            <tr><td class="m">17</td><td class="m">DO_LAND_START</td><td class="d">— (0,0)</td><td class="d">—</td><td class="d">cmd 189</td></tr>
+            <tr><td class="m">18</td><td class="m">WAYPOINT</td><td class="d">1600 m antes do toque</td><td class="m">140</td><td class="d">porta de entrada da final (rampa 8,9 %)</td></tr>
+            <tr><td class="m">19</td><td class="m">WAYPOINT</td><td class="d">700 m antes do toque</td><td class="m">60</td><td class="d">FAF (rampa 8,6 %)</td></tr>
+            <tr><td class="m">20</td><td class="m">LAND</td><td class="d">pista (= HOME)</td><td class="m">0</td><td class="d"></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout warn">
+        <strong>Não reordenar os itens 12 em diante.</strong>
+        <code>AP_Mission::distance_to_mission_leg()</code> percorre a missão <em>para a frente</em> a
+        partir do <code>DO_RETURN_PATH_START</code> e <strong>para</strong> no primeiro
+        <code>DO_LAND_START</code>. Se não encontrar nenhum antes do fim da missão, o retorno
+        automático <strong>falha</strong>.
+      </div>
+
+      <h3>Porque é que a espiral de descida é feita de loiters empilhados</h3>
+      <p class="muted">
+        Porque o <code>jump_to_closest_mission_leg()</code> calcula a distância <em>3D</em> do avião
+        a cada perna do caminho de retorno. Com os <code>LOITER_TO_ALT</code> todos no mesmo
+        lat/lon, o vetor de cada perna fica <strong class="hi">puramente vertical</strong>, e a
+        distância de reengate passa a ser "distância horizontal + excesso vertical fora da faixa de
+        altitude". O avião reengata automaticamente <strong>na faixa de altitude em que está</strong>:
+        um failsafe a 600 m entra no degrau 1000→500; a 1800 m entra no degrau 2000→1500.
+      </p>
+
+      <h3><code>LOITER_TO_ALT</code> — o que cada parâmetro faz mesmo</h3>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Campo</th><th>Valor usado</th><th>Significado real no ArduPlane 4.8</th></tr></thead>
+          <tbody>
+            <tr><td class="m">param1</td><td class="m">0</td><td class="d">Ignorado pelo ArduPlane.</td></tr>
+            <tr><td class="m">param2</td><td class="m">400</td><td class="d"><strong class="hi">Raio em metros.</strong> O sinal dá o sentido (negativo = anti-horário). <strong>0 cai no <code>WP_LOITER_RAD</code></strong> — por isso vai explícito.</td></tr>
+            <tr><td class="m">param3</td><td class="m">0</td><td class="d">Não usado neste comando.</td></tr>
+            <tr><td class="m">param4</td><td class="m">0 / 1</td><td class="d">0 = crosstrack a partir do centro; 1 = a partir da tangente de saída. O último degrau da descida usa 1.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Variante de pouso manual</h3>
+      <p class="muted">
+        Com <code>manual_land:=true</code> entram, entre o item 11 e o
+        <code>DO_RETURN_PATH_START</code>, uma descida nominal própria (4 × <code>LOITER_TO_ALT</code>:
+        1500 / 1000 / 500 / 150 m) e um <code>LOITER_UNLIM</code> a 150 m onde o piloto assume.
+        São 26 itens. A descida nominal é obrigatória: <strong>não se vai de 2000 m direto para um
+        loiter a 150 m</strong>. O <code>LOITER_UNLIM</code> fica deslocado 300 m da pista para
+        dentro do círculo — com raio de 200 m, centrado na pista sairia ~130 m da área.
+      </p>
+      <p class="muted">
+        A sequência de retorno automático fica <strong class="hi">intocada</strong> em qualquer dos
+        casos, porque é ela que o failsafe usa.
+      </p>
+    </section>
+
+    <!-- ================================================================= -->
+    <section id="parametros">
+      <span class="label">Configuração</span>
+      <h2>Parâmetros — e o porquê dos principais</h2>
+      <p class="muted">
+        26 linhas alteradas num ficheiro de 1135. Nenhum ganho de PID, calibração de sensor, RC,
+        servo ou telemetria foi tocado. Tabela completa e justificada em
+        <code>src/artex27/params/artex27_diff.md</code>; versão curta em
+        <code>python3 -m artex27.params</code>.
+      </p>
+
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Parâmetro</th><th>Antes</th><th>ARTEX</th><th>Porquê</th></tr></thead>
+          <tbody>
+            <tr><td class="m">TECS_CLMB_MAX</td><td class="m">5</td><td class="m"><strong class="hi">0.8</strong></td><td class="d">A barreira primária do gradiente. Com 5 a subida seria a 33 % — mais de 3× o limite.</td></tr>
+            <tr><td class="m">TECS_SINK_MAX</td><td class="m">5</td><td class="m"><strong class="hi">1.0</strong></td><td class="d">10 % também na descida. ⚠️ fica <em>abaixo</em> do <code>TECS_SINK_MIN</code>.</td></tr>
+            <tr><td class="m">TECS_PITCH_MAX</td><td class="m">15</td><td class="m">10</td><td class="d">Protecção secundária. Só atua com acelerador automático; no flare o TECS substitui-o pelo <code>TECS_LAND_PMAX</code>.</td></tr>
+            <tr><td class="m">TECS_PITCH_MIN</td><td class="m">0</td><td class="m">−15</td><td class="d">Deixa o <code>SINK_MAX</code> morder antes do limite de atitude.</td></tr>
+            <tr><td class="m">PTCH_LIM_MAX_DEG</td><td class="m">25</td><td class="m">15</td><td class="d">Redução moderada. Mantém-se &gt; <code>TECS_LAND_PMAX</code> (10) para não cortar o flare.</td></tr>
+            <tr><td class="m">TECS_TIME_CONST</td><td class="m">5</td><td class="m">8</td><td class="d">Baixar o <code>CLMB_MAX</code> multiplica o ganho do laço de acelerador por <strong class="hi">2,5×</strong>; tc = 8 recupera metade. Confiança <strong>baixa</strong>.</td></tr>
+            <tr><td class="m">WP_LOITER_RAD</td><td class="m">60</td><td class="m">200</td><td class="d">Vale para o RTL e loiters com <code>param2 = 0</code>. A espiral leva 400 explícito.</td></tr>
+            <tr><td class="m">NAVL1_LIM_BANK</td><td class="m">0</td><td class="m">0</td><td class="d">Mantido. Consequência aceite: raio × EAS2TAS², ~487 m a 2000 m.</td></tr>
+            <tr><td class="m">RTL_AUTOLAND</td><td class="m">0</td><td class="m"><strong class="hi">4</strong></td><td class="d"><strong>Obrigatório.</strong> Com 0 e um <code>DO_RETURN_PATH_START</code> na missão, o <strong>arme falha</strong>.</td></tr>
+            <tr><td class="m">TECS_LAND_ARSPD</td><td class="m">−1</td><td class="m">14.5</td><td class="d">−1 deixaria a final a 15 m/s.</td></tr>
+            <tr><td class="m">FENCE_ENABLE</td><td class="m">0</td><td class="m">1</td><td class="d">A missão exige contenção na área UAS.</td></tr>
+            <tr><td class="m">FENCE_TYPE</td><td class="m">4</td><td class="m">5</td><td class="d">1 (altitude máx) + 4 (polígono). O bit 2 (<code>FENCE_RADIUS</code> circular) fica desligado: 300 m não chega.</td></tr>
+            <tr><td class="m">FENCE_ALT_MAX</td><td class="m">100</td><td class="m">2100</td><td class="d">Acima dos 2000 m alvo, com folga para o overshoot do TECS.</td></tr>
+            <tr><td class="m">FENCE_ALT_MAX_TP</td><td class="d">ausente</td><td class="m">1</td><td class="d">Teto medido a partir do ponto de descolagem, não AMSL — torna-o independente da elevação do terreno.</td></tr>
+            <tr><td class="m">FENCE_AUTOENABLE</td><td class="m">0</td><td class="m">3</td><td class="d">Liga no arme, desliga na aterragem automática.</td></tr>
+            <tr><td class="m">FS_LONG_ACTN</td><td class="m">1</td><td class="m">1</td><td class="d">RTL. O default 0 faria o avião <em>continuar</em> a missão.</td></tr>
+            <tr><td class="m">FS_LONG_TIMEOUT</td><td class="m">5</td><td class="m">10</td><td class="d">A 2000 m há tempo para a ligação recuperar antes de abortar 40 min de subida.</td></tr>
+            <tr><td class="m">BATT_LOW_MAH</td><td class="m">500</td><td class="m">8100</td><td class="d">30 % de reserva sobre 27 000 mAh.</td></tr>
+            <tr><td class="m">BATT_CRT_MAH</td><td class="m">0</td><td class="m">5400</td><td class="d">20 % de reserva.</td></tr>
+            <tr><td class="m">BATT_FS_LOW_ACT / CRT_ACT</td><td class="m">0 / 0</td><td class="m">1 / 2</td><td class="d">RTL / aterrar.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Migração para a 4.8 — nomes que já não existem</h3>
+      <p class="muted">
+        O firmware é ArduPlane <strong class="hi">4.8.0-dev</strong>. Sete parâmetros do ficheiro de
+        referência mudaram de nome e um foi removido:
+      </p>
+      <pre><code>GLIDE_SLOPE_MIN  → ALT_SLOPE_MIN        SYSID_THISMAV → MAV_SYSID
+GLIDE_SLOPE_THR  → ALT_SLOPE_MAXHGT     SYSID_MYGCS   → MAV_GCS_SYSID
+TELEM_DELAY      → MAV_TELEM_DELAY      SYSID_ENFORCE → <span class="k">removido</span>
+FS_SHORT_TIMEOUT → <span class="k">removido</span>
+<span class="c"># e os modernos que já se usam: AIRSPEED_CRUISE (não TRIM_ARSPD_CM),</span>
+<span class="c">#                              PTCH_LIM_MAX_DEG (não LIM_PITCH_MAX)</span></code></pre>
+
+      <h3>O efeito colateral não óbvio do <code>TECS_CLMB_MAX</code></h3>
+      <pre><code>K_thr2STE  = (STEdot_max − STEdot_min) / (THRmax − THRmin)
+K_STE2Thr  = 1 / (TECS_TIME_CONST × K_thr2STE)      <span class="c"># ganho P do laço de acelerador</span>
+
+<span class="c"># antes:    CLMB_MAX 5,   SINK_MIN 2, tc 5  →  ganho 1,00 ×</span>
+<span class="c"># só baixar CLMB_MAX 0.8, SINK_MIN 2, tc 5  →  ganho 2,50 ×  ← hunting do acelerador</span>
+<span class="c"># adotado:  CLMB_MAX 0.8, SINK_MIN 2, tc 8  →  ganho 1,56 ×</span></code></pre>
+      <p class="muted">
+        Baixar o <code>TECS_CLMB_MAX</code> <strong class="hi">sobe</strong> o ganho do laço de
+        acelerador em 2,5×. Subir <code>TECS_TIME_CONST</code> para 8 recupera cerca de metade
+        (12,5 seria a compensação exata, mas está fora do range válido 3–10). Teste em SITL: se o
+        acelerador oscilar, subir tc para 10 e/ou <code>TECS_THR_DAMP</code> de 0,5 para 0,7.
+      </p>
+    </section>
+
+    <!-- ================================================================= -->
+    <section id="correr">
+      <span class="label">Mãos à obra</span>
+      <h2>Como correr</h2>
+
+      <h3>Tudo corre em Docker</h3>
+      <p class="muted">
+        Nada deste pacote se corre no host. O ambiente é o
+        <code>docker/docker-compose.yml</code> deste workspace &mdash; <strong class="hi">não</strong>
+        o <code>docker-compose.yaml</code> da raiz (serviço <code>atlas</code>, imagem
+        <code>caixinha</code>, monta em <code>/home/ros/atlas</code>), que é o ambiente antigo e a
+        fonte de metade da confusão.
+      </p>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>O quê</th><th>Valor</th></tr></thead>
+          <tbody>
+            <tr><td class="d">Ficheiro compose</td><td class="m">docker/docker-compose.yml</td></tr>
+            <tr><td class="d">Imagem</td><td class="m">atlas-sim:humble</td></tr>
+            <tr><td class="d">Serviço para comandos avulsos</td><td class="m">dev</td></tr>
+            <tr><td class="d">Workspace dentro do container</td><td class="m">/home/ros/atlas_ws</td></tr>
+            <tr><td class="d">Working dir</td><td class="m">/home/ros/atlas_ws</td></tr>
+            <tr><td class="d">Rede</td><td class="m">network_mode: host</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="muted">
+        O serviço <code>dev</code> tem <code>profiles: ["dev"]</code>, por isso não sobe com
+        <code>docker compose up</code> &mdash; invoca-se sempre à mão. Como o working dir já é a raiz
+        do workspace, <strong class="hi">os caminhos relativos desta página funcionam tal e qual</strong>.
+        A rede é <code>host</code>: <code>127.0.0.1</code> é o mesmo no host e em todos os containers.
+      </p>
+      <pre><code><span class="c"># a partir daqui, todos os comandos pressupõem esta pasta</span>
+cd ~/git_projects/atlas_ws/docker
+xhost +local:docker          <span class="c"># só na 1.ª vez da sessão, e só se quiseres GUI</span>
+
+<span class="c"># (a) um comando de cada vez — bom para scripts e CI</span>
+docker compose run --rm dev colcon build --packages-select artex27
+
+<span class="c"># (b) um shell, e depois vários comandos lá dentro — é o que se faz na prática</span>
+docker compose run --rm dev bash</code></pre>
+      <p class="muted">
+        Na forma (b), o prompt fica <code>ros@...:/home/ros/atlas_ws$</code> e o
+        <code>atlas-env</code> da imagem já fez o <code>source</code> do <code>install/</code> do
+        workspace. Na forma (a), cada <code>docker compose run</code> arranca um container novo; se
+        precisares do overlay sem shell interactivo, usa
+        <code>docker compose run --rm dev bash -lc '&lt;comando&gt;'</code>.
+      </p>
+
+      <div class="callout warn">
+        <strong>Em SITL é obrigatório <code>NO_MAVPROXY=1</code>.</strong>
+        O <code>artex_mission</code> faz <strong>push de missão e de geofence</strong> via MAVROS.
+        Se o SITL arrancar com MAVProxy &mdash; o <em>default</em> do <code>ap-sim</code> e do
+        <code>ap-sitl</code> &mdash; o MAVProxy e o MAVROS competem pelo mesmo canal no protocolo de
+        missão e o upload <strong>falha</strong>, com
+        <code>MISSION_ACK: INVALID_SEQUENCE</code> ou <code>Mission upload timeout</code>.
+        É a primeira pedra em que se tropeça.
+        <br><br>
+        Com <code>NO_MAVPROXY=1</code> o SITL expõe MAVLink cru em
+        <code>tcp://127.0.0.1:5760</code> e o MAVROS liga lá directamente, sem intermediário.
+        O <code>ap-sim</code> detecta a variável e passa o <code>fcu_url</code> certo ao
+        <code>ap-mavros</code>; o <code>tools/sim/run_sitl.sh</code> tem a mesma opção com o nome
+        <code>--no-mavproxy</code>.
+        <br><br>
+        <strong>Contrapartida:</strong> sem MAVProxy não há injecção de RC (é o MAVProxy que
+        alimenta o RC do SITL), por isso os <strong>failsafes de rádio deixam de ser
+        representativos</strong>. Para esses, correr com MAVProxy e carregar a missão sem MAVROS.
+      </div>
+
+      <h3>Compilar</h3>
+      <pre><code>cd ~/git_projects/atlas_ws/docker
+docker compose run --rm dev colcon build --packages-select artex27
+
+<span class="c"># dependências: uma vez, ou quando o package.xml muda</span>
+docker compose run --rm dev atlas-deps</code></pre>
+
+      <h3>Sem ROS &mdash; só verificar a geometria e os números</h3>
+      <p class="muted">
+        <code>geo.py</code> e <code>profile.py</code> não dependem de ROS;
+        <code>mission.py</code> e <code>fence.py</code> só precisam de <code>mavros_msgs</code> para
+        construir as mensagens. Com um shell aberto
+        (<code>docker compose run --rm dev bash</code>):
+      </p>
+      <pre><code><span class="c"># perfil vertical: tabela de vento, tempos, voltas, raio efetivo</span>
+python3 -m artex27.profile
+
+<span class="c"># missão item a item + validação (21 itens, tudo dentro do círculo)</span>
+python3 -m artex27.mission
+
+<span class="c"># variante de pouso manual, e gravar um .waypoints</span>
+python3 -m artex27.mission --manual-land --wpl /tmp/artex_manual.waypoints
+
+<span class="c"># com o QFU real da pista, quando for conhecido</span>
+python3 -m artex27.mission --approach-brg 317.2
+
+<span class="c"># geofence de inclusão</span>
+python3 -m artex27.fence
+
+<span class="c"># tabela de parâmetros e riscos abertos</span>
+python3 -m artex27.params</code></pre>
+      <p class="muted">
+        Ou um a um, a partir de <code>docker/</code>:
+        <code>docker compose run --rm dev bash -lc 'python3 -m artex27.profile'</code>.
+        Estes módulos vêm do <code>install/</code>: sem um <code>colcon build</code> feito pelo menos
+        uma vez, o <code>python3 -m artex27.…</code> não encontra o pacote.
+      </p>
+
+      <h3>Carregar missão + geofence no FCU</h3>
+      <p class="muted">
+        Assume que o <strong class="hi">MAVROS já está no ar</strong>, ligado ao avião ou ao SITL
+        (e, em SITL, que o SITL arrancou com <code>NO_MAVPROXY=1</code>).
+      </p>
+      <pre><code>cd ~/git_projects/atlas_ws/docker
+docker compose run --rm dev ros2 launch artex27 artex_mission.launch.py
+docker compose run --rm dev ros2 launch artex27 artex_mission.launch.py manual_land:=true
+docker compose run --rm dev ros2 launch artex27 artex_mission.launch.py approach_brg:=317.2
+docker compose run --rm dev ros2 launch artex27 artex_mission.launch.py vehicle:=icarus
+
+<span class="c"># ou diretamente, com o ficheiro de configuração do pacote</span>
+docker compose run --rm dev bash -lc \
+  <span class="s">'ros2 run artex27 artex_mission --ros-args \
+     --params-file $(ros2 pkg prefix artex27)/share/artex27/config/artex27.yaml'</span></code></pre>
+
+      <div class="callout warn">
+        <strong>Este nó não arma e não descola.</strong> A descolagem do ARTEX é
+        <strong>manual</strong>: o piloto descola, sobe até ~100 m sobre a pista e só então passa
+        para AUTO. Por isso não se usa o <code>run_mission()</code> da <code>mavros_library</code>,
+        que faria GUIDED → arm → AUTO → MISSION_START.
+      </div>
+
+      <h3>Pré-voo automatizado</h3>
+      <pre><code>docker compose run --rm dev ros2 launch artex27 artex_check.launch.py
+docker compose run --rm dev ros2 run artex27 artex_check --ros-args -p manual_land:=true</code></pre>
+      <p class="muted">
+        Lê do FCU a <strong class="hi">missão</strong> (contagem, sequência de comandos, contenção
+        no círculo, ordem <code>188 → 189 → LAND</code>), a <strong class="hi">geofence</strong>
+        (existe, é de inclusão, cobre a missão) e os <strong class="hi">parâmetros</strong> (compara
+        com a tabela de <code>artex27.params</code>). Sai com código 0 se estiver tudo conforme.
+        <strong>Não escreve nada.</strong>
+      </p>
+
+      <h3>Testes</h3>
+      <pre><code>docker compose run --rm dev colcon test --packages-select artex27
+docker compose run --rm dev colcon test-result --verbose</code></pre>
+      <p class="muted">
+        Os testes de SITL (gradiente de subida, failsafes) ficam na secção
+        <a href="#sitl">SITL de ponta a ponta</a>.
+      </p>
+
+      <h3>Configuração</h3>
+      <p class="muted">
+        <code>config/artex27.yaml</code>. Os dois nós leem daqui; o bloco <code>/**</code> aplica a
+        ambos.
+      </p>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Chave</th><th>Omissão</th><th>O que faz</th></tr></thead>
+          <tbody>
+            <tr><td class="m">vehicle</td><td class="m">mavros</td><td class="d">Prefixo MAVROS. Válidos: <code>mavros</code>, <code>drone</code>, <code>vtol</code>, <code>icarus</code>, <code>prometeu</code>.</td></tr>
+            <tr><td class="m">climb_steps_m</td><td class="m">300…2000</td><td class="d">Altitudes dos 9 <code>LOITER_TO_ALT</code> de subida.</td></tr>
+            <tr><td class="m">descent_steps_m</td><td class="m">1500…140</td><td class="d">Altitudes dos 4 de descida.</td></tr>
+            <tr><td class="m">loiter_radius_m</td><td class="m">400.0</td><td class="d">Raio comandado em <code>param2</code>.</td></tr>
+            <tr><td class="m">approach_brg</td><td class="m">−1.0</td><td class="d">−1 = usa o rumo geométrico centro → pista (137,2°). Substituir pelo QFU real.</td></tr>
+            <tr><td class="m">manual_land</td><td class="m">false</td><td class="d">Variante com <code>LOITER_UNLIM</code>.</td></tr>
+            <tr><td class="m">push_fence</td><td class="m">true</td><td class="d">Carregar também a geofence.</td></tr>
+            <tr><td class="m">fence_inset_m / fence_vertices</td><td class="m">20.0 / 36</td><td class="d">Recuo para dentro da borda e nº de vértices do polígono.</td></tr>
+            <tr><td class="m">terrain_elev_amsl_m</td><td class="m">−1.0</td><td class="d"><strong class="hi">PENDENTE</strong>. −1 = desconhecida; sem ela não se verifica o teto de 3000 m AMSL.</td></tr>
+            <tr><td class="m">design_wind_ms</td><td class="m">5.0</td><td class="d">Vento de frente previsto em altitude. Entra na fórmula do <code>TECS_CLMB_MAX</code>.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Lacuna conhecida na <code>mavros_library</code></h3>
+      <div class="callout">
+        <code>MAV_CMD_DO_RETURN_PATH_START</code> (<strong>188</strong>) <strong>não existe</strong>
+        no <code>commands.json</code> da <code>mavros_library</code> — o ficheiro salta de 187
+        (<code>DO_SET_ACTUATOR</code>) para 189 (<code>DO_LAND_START</code>). A
+        <code>mavros_library</code> é um <strong>submódulo git</strong> e não é editada aqui, por
+        isso o 188 fica definido localmente em <code>artex27/mission.py</code>:
+        <br><br>
+        <code>CMD_DO_RETURN_PATH_START = COMMANDS.get('MAV_CMD_DO_RETURN_PATH_START', 188)</code>
+        <br><br>
+        O <code>.get()</code> faz com que, assim que o upstream acrescentar a chave, o pacote passe
+        a usá-la sem alteração nenhuma. <strong>A fazer:</strong> PR em
+        <code>AeroTec-ATLAS/mavros_library</code> a acrescentar
+        <code>"MAV_CMD_DO_RETURN_PATH_START": 188</code>.
+      </div>
+    </section>
+
+    <!-- ================================================================= -->
+    <section id="sitl">
+      <span class="label">Simulação</span>
+      <h2>SITL &mdash; sequência de ponta a ponta</h2>
+      <p class="lede">
+        O pacote compila, os módulos importam e a missão gerada valida.
+        <strong class="hi">Nada foi voado nem simulado com este código.</strong> Esta é a sequência
+        mínima, do zero até à missão carregada no SITL.
+      </p>
+      <p class="muted">
+        Tudo a partir de <code>~/git_projects/atlas_ws/docker</code>. Precisas de
+        <strong class="hi">3 terminais</strong> (ou de um <code>tmux</code>), porque o SITL e o
+        MAVROS ficam a correr em primeiro plano.
+      </p>
+
+      <h3>Passo 0 &mdash; compilar</h3>
+      <pre><code>cd ~/git_projects/atlas_ws/docker
+docker compose run --rm dev colcon build --packages-select artex27</code></pre>
+
+      <h3>Passo 1 &mdash; SITL de asa fixa, na localização do ARTEX, com os parâmetros do ARTEX</h3>
+      <p class="muted">Terminal 1:</p>
+      <pre><code>docker compose run --rm dev \
+  src/artex27/tools/sim/run_sitl.sh --headless --no-mavproxy --no-mission --no-fence</code></pre>
+      <p class="muted">
+        O que o <code>run_sitl.sh</code> faz sozinho, e por isso não aparece na linha de comandos:
+      </p>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>O quê</th><th>Como</th></tr></thead>
+          <tbody>
+            <tr><td class="d">Veículo</td><td class="m">-v ArduPlane -f plane</td></tr>
+            <tr><td class="d">Localização</td><td class="m">-L ARTEX_RUNWAY, via ARDUPILOT_LOCATIONS=tools/sim/locations.txt</td></tr>
+            <tr><td class="d">Parâmetros</td><td class="m">--add-param-file=params/artex27_sitl.param</td></tr>
+            <tr><td class="d">EEPROM</td><td class="m">-w (apaga, para o .param pegar de forma determinística)</td></tr>
+            <tr><td class="d">Dir. de trabalho</td><td class="m">tools/sim/run/0/ &mdash; eeprom.bin e logs/</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="muted">
+        <code>--no-mission --no-fence</code> são de propósito: queremos que seja o
+        <strong class="hi"><code>artex_mission</code> via MAVROS</strong> a carregá-las, que é o que
+        se quer exercitar. Para carregar missão e fence <em>sem</em> ROS, tira as duas flags &mdash;
+        o <code>run_sitl.sh</code> fá-lo pelo canal próprio <code>tcp:127.0.0.1:5762</code>
+        (SERIAL1), onde não há colisão com nada. <code>--no-mavproxy</code>
+        <strong>não é opcional aqui</strong>: ver o aviso na secção
+        <a href="#correr">Como correr</a>. Consequência prática: MAVLink cru em
+        <code>tcp://127.0.0.1:5760</code> e <strong>não</strong> há <code>udp:14550</code>.
+      </p>
+
+      <h3>Passo 2 &mdash; MAVROS ligado ao MAVLink cru</h3>
+      <p class="muted">Terminal 2:</p>
+      <pre><code>docker compose run --rm dev ap-mavros tcp://127.0.0.1:5760</code></pre>
+      <p class="muted">Confirmar, no terminal 3, que ligou &mdash; <code>connected: true</code>, <code>mode: MANUAL</code>:</p>
+      <pre><code>docker compose run --rm dev bash -lc <span class="s">'ros2 topic echo --once /mavros/state'</span></code></pre>
+
+      <h3>Passo 3 &mdash; carregar missão + geofence</h3>
+      <p class="muted">Terminal 3:</p>
+      <pre><code>docker compose run --rm dev ros2 launch artex27 artex_mission.launch.py</code></pre>
+      <p class="muted">
+        Variantes: <code>manual_land:=true</code>, <code>approach_brg:=317.2</code>,
+        <code>vehicle:=icarus</code>.
+      </p>
+
+      <h3>Passo 4 &mdash; verificar</h3>
+      <pre><code>docker compose run --rm dev ros2 launch artex27 artex_check.launch.py</code></pre>
+      <p class="muted">
+        Lê do FCU missão, geofence e parâmetros e compara com o esperado.
+        <strong class="hi">Código de saída 0</strong> = tudo conforme.
+      </p>
+
+      <h3>Passo 5 &mdash; testes de perfil e de failsafe</h3>
+      <pre><code>docker compose run --rm dev python3 src/artex27/tools/sim/test_climb_gradient.py
+docker compose run --rm dev python3 src/artex27/tools/sim/test_failsafes.py</code></pre>
+      <p class="muted">
+        Estes ligam a <code>tcp:127.0.0.1:5762</code> (SERIAL1), não ao MAVROS. Ver
+        <code>src/artex27/tools/sim/README.md</code>.
+      </p>
+
+      <h3>Tudo num só shell</h3>
+      <pre><code>cd ~/git_projects/atlas_ws/docker
+docker compose run --rm dev bash</code></pre>
+      <p class="muted">e lá dentro, com <code>tmux</code> ou com <code>&amp;</code>:</p>
+      <pre><code>colcon build --packages-select artex27
+src/artex27/tools/sim/run_sitl.sh --headless --no-mavproxy --no-mission --no-fence &amp;
+sleep 25
+ap-mavros tcp://127.0.0.1:5760 &amp;
+sleep 10
+ros2 launch artex27 artex_mission.launch.py
+ros2 launch artex27 artex_check.launch.py</code></pre>
+
+      <div class="callout">
+        <strong>O modelo de voo do SITL não é a aeronave do ARTEX</strong> &mdash; nem o
+        <code>plane</code> nativo que o <code>run_sitl.sh</code> usa, nem o
+        <code>gazebo-zephyr</code> do <code>ap-sitl plane</code>. Do SITL transfere-se a
+        <strong>lógica</strong>: geometria da missão, sequência de comandos, reengate do
+        <code>DO_RETURN_PATH_START</code>, comportamento dos failsafes e contenção na fence.
+        <strong>Não</strong> transferem os números absolutos de desempenho &mdash; razão de subida
+        atingível a <code>THR_MAX</code>, consumo de corrente e, por consequência, a autonomia.
+        Esses continuam a precisar de medição no avião real
+        (<a href="#riscos">riscos</a>, ponto 2).
+      </div>
+
+      <h3>Variante com Gazebo</h3>
+      <p class="muted">
+        O <code>run_sitl.sh</code> corre SITL nativo, sem Gazebo: é determinístico, não precisa de
+        GPU nem de X11 e arranca em segundos. Para o visual, usa-se o atalho da imagem, em dois
+        terminais, com <code>xhost +local:docker</code> feito antes.
+      </p>
+      <pre><code><span class="c"># terminal 1 — mundo do Zephyr</span>
+docker compose run --rm dev ap-gazebo plane
+
+<span class="c"># terminal 2 — SITL com a localização e os parâmetros do ARTEX</span>
+docker compose run --rm dev env \
+  NO_MAVPROXY=1 WAIT_GAZEBO=10 \
+  ARDUPILOT_LOCATIONS=/home/ros/atlas_ws/src/artex27/tools/sim/locations.txt \
+  LOCATION=ARTEX_RUNWAY \
+  ap-sitl plane -w \
+  --add-param-file=/home/ros/atlas_ws/src/artex27/params/artex27_sitl.param</code></pre>
+      <p class="muted">
+        Os argumentos extra do <code>ap-sitl</code> são reenviados tal e qual para o
+        <code>sim_vehicle.py</code>. Daí para a frente, os passos 2 a 4 são iguais.
+        O <code>ap-sim plane</code> sobe Gazebo + SITL + MAVROS num só comando, em três painéis
+        <code>tmux</code> (<code>Ctrl-b &lt;seta&gt;</code> muda de painel, <code>Ctrl-b d</code>
+        destaca, <code>tmux attach -t sim</code> volta), mas <strong>não reenvia argumentos</strong>
+        ao <code>sim_vehicle.py</code> &mdash; logo não dá para lhe passar o
+        <code>--add-param-file</code> do ARTEX. Serve para um SITL genérico:
+        <code>docker compose run --rm dev env NO_MAVPROXY=1 ap-sim plane</code>.
+      </p>
+
+      <h3>A <code>LOCATION</code> do ARTEX &mdash; como funciona de facto</h3>
+      <p class="muted">
+        <code>Tools/autotest/locations.txt</code> está dentro do submódulo
+        <code>src/ardupilot</code> e <strong class="hi">não se edita</strong>. Não é preciso: o
+        <code>sim_vehicle.py</code> procura a localização em <strong>três</strong> sítios, por esta
+        ordem (<code>parse_locations()</code>,
+        <code>Tools/autotest/sim_vehicle.py:739-741</code>):
+      </p>
+      <ul>
+        <li><strong class="hi">1.</strong> o ficheiro apontado por <code>$ARDUPILOT_LOCATIONS</code>;</li>
+        <li><strong class="hi">2.</strong> <code>$XDG_CONFIG_HOME/ardupilot/locations.txt</code> (ou <code>~/.config/ardupilot/locations.txt</code>);</li>
+        <li><strong class="hi">3.</strong> <code>Tools/autotest/locations.txt</code> do submódulo.</li>
+      </ul>
+      <p class="muted">
+        É para isso que existe <code>src/artex27/tools/sim/locations.txt</code>. O
+        <code>run_sitl.sh</code> exporta a variável sozinho, por isso <code>-L ARTEX_RUNWAY</code>
+        simplesmente funciona. Com o <code>ap-sitl</code>, exporta-se à mão (ver a variante com
+        Gazebo, acima). Formato de cada linha:
+        <code>NOME=lat,lon,alt_AMSL,heading</code>.
+      </p>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Nome</th><th>O que é</th></tr></thead>
+          <tbody>
+            <tr><td class="m">ARTEX_RUNWAY</td><td class="d">Marcador <code>Runway</code> do KML; é onde a missão põe o HOME. <strong class="hi">Omissão do <code>run_sitl.sh</code></strong>.</td></tr>
+            <tr><td class="m">ARTEX</td><td class="d">Centro do círculo UAS TO/LD Area 11 TF; é onde fica a espiral.</td></tr>
+            <tr><td class="m">ARTEX_RUNWAY_137</td><td class="d">A pista, com o avião já apontado no sentido da aproximação.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="muted">
+        <strong class="hi">Alternativa sem ficheiro nenhum:</strong> o <code>sim_vehicle.py</code>
+        tem <code>-l</code> / <code>--custom-location</code>, que aceita
+        <code>lat,lon,alt,heading</code> directamente.
+      </p>
+      <pre><code>docker compose run --rm dev env NO_MAVPROXY=1 ap-sitl plane \
+  -l 39.3993570,-8.2864182,100,317</code></pre>
+      <div class="callout warn">
+        <strong>Pendência.</strong> Os <code>100</code> m de elevação em
+        <code>locations.txt</code> são um valor de trabalho &mdash; a elevação real do terreno na
+        pista não está confirmada. Só afecta a conversão relativa ↔ AMSL; o perfil de subida é
+        relativo ao HOME e não muda.
+      </div>
+    </section>
+
+    <!-- ================================================================= -->
+    <section id="gcs">
+      <span class="label">Sem ROS</span>
+      <h2>Carregar missão, geofence e KML nas GCS</h2>
+      <p class="muted">
+        Os ficheiros estáticos continuam em <code>src/artex27/missions/</code> e
+        <code>src/artex27/params/</code>. São idênticos ao que o pacote gera em código — foi
+        verificado byte a byte.
+      </p>
+
+      <h3>QGroundControl</h3>
+      <ul>
+        <li><strong>Missão</strong> — <code>Plan</code> → ícone de ficheiro (canto superior
+          esquerdo) → <code>Open…</code> → <code>artex27.plan</code> →
+          <code>Upload Required</code> → <code>Upload</code>. O <code>.plan</code> traz missão
+          <em>e</em> geofence juntos.</li>
+        <li><strong>Geofence sozinha</strong> — <code>Plan</code> → <code>Open…</code> →
+          <code>artex27_geofence.plan</code>.</li>
+        <li><strong>Ver as áreas do KML</strong> — o <code>ARTEX 26 Geo v173.kml</code> tem 440
+          placemarks e o QGC <strong>não abre um KML desses</strong>: o importador espera
+          <em>um polígono</em>. Por isso há a pasta <code>missions/kml/</code>, com um ficheiro por
+          área: <code>Plan</code> → <code>Fence</code> → <code>Polygon Fence</code> →
+          <code>Load KML/SHP File</code> → <code>kml/uas_to_ld_area_11_tf.kml</code>.</li>
+      </ul>
+      <div class="callout">
+        O <code>.waypoints</code> também abre no QGC, mas <strong>perde a geofence e a
+        <code>plannedHomePosition</code></strong>. Prefira o <code>.plan</code>. É também por isso
+        que os <code>.waypoints</code> não têm linhas de comentário: o leitor WPL do QGC é estrito e
+        rejeitaria linhas <code>#</code>.
+      </div>
+
+      <h3>Mission Planner</h3>
+      <ul>
+        <li><strong>Missão</strong> — <code>Plan</code> → <code>Load WP File</code> →
+          <code>artex27.waypoints</code> → <code>Write WPs</code>.</li>
+        <li><strong>Geofence poligonal</strong> — <code>Plan</code> → <code>Geo-Fence</code> (ou
+          botão direito no mapa → <code>Draw Polygon</code> → <code>Fence</code> →
+          <code>Load from file</code>) → <code>artex27_geofence.waypoints</code> →
+          <code>Upload</code>. Formato legado <code>FENCE_POINT</code>: a primeira linha é o
+          <em>return point</em>.</li>
+        <li><strong>Ver o KML</strong> — <code>Plan</code> → botão direito → <code>Map Tool</code> →
+          <code>KML Overlay</code> → o <code>ARTEX 26 Geo v173.kml</code> completo (o MP aguenta) ou
+          <code>kml/artex_areas.kml</code>.</li>
+      </ul>
+
+      <h3>MAVProxy / SITL</h3>
+      <pre><code>wp load    /home/ros/atlas_ws/src/artex27/missions/artex27.waypoints
+fence load /home/ros/atlas_ws/src/artex27/missions/artex27_geofence.waypoints
+param load /home/ros/atlas_ws/src/artex27/params/artex27_sitl.param</code></pre>
+      <p class="muted">
+        Comandos da <strong>consola do MAVProxy</strong>, não da shell. Caminhos
+        <strong class="hi">absolutos</strong>: o MAVProxy corre no diretório de trabalho do SITL
+        (<code>tools/sim/run/0/</code>), não na raiz do workspace. Isto só se aplica quando há
+        MAVProxy &mdash; se arrancaste com <code>NO_MAVPROXY=1</code> não existe consola nenhuma; aí
+        a missão vai pelo <a href="#sitl"><code>artex_mission</code> via MAVROS</a> ou pelo
+        <code>run_sitl.sh</code>, que a carrega sozinho pelo SERIAL1.
+      </p>
+
+      <h3>Parâmetros</h3>
+      <p class="muted">
+        Para voo real: <code>params/artex27.param</code> — ficheiro <strong>completo</strong>
+        (1134 parâmetros), derivado do <code>Param ACC26 26-09-2026 2202.param</code> com 23
+        alterações de missão + 7 correções de nomes 4.8. Para SITL:
+        <code>params/artex27_sitl.param</code>, que é um <strong>delta</strong> — só os valores
+        de missão e os <code>SIM_*</code>, sem calibrações, pinos, RC, servos ou PIDs do avião real.
+      </p>
+      <div class="callout warn">
+        <strong><code>RTL_AUTOLAND</code> tem de estar a 4 <em>antes</em> de carregar esta
+        missão.</strong> Com um <code>DO_RETURN_PATH_START</code> na missão e
+        <code>RTL_AUTOLAND = 0</code>, o pre-arm falha com
+        <em>"DO_RETURN_PATH_START set and RTL_AUTOLAND disabled"</em>. O avião tem hoje 0.
+      </div>
+    </section>
+
+    <!-- ================================================================= -->
+    <section id="checklist">
+      <span class="label">Antes de voar</span>
+      <h2>Checklist de pré-voo</h2>
+      <p class="muted">
+        A ATLAS já tem uma checklist de inspeção impressa — a
+        <strong class="hi">Calypso Pre-Flight Inspection</strong>, 5 páginas, com secções 1 a 6 e
+        campos de <em>Inspector</em> e assinatura. Esta secção <strong>não a substitui</strong>:
+        resume a estrutura e marca o que esta missão muda.
+      </p>
+
+      <div class="callout warn">
+        <strong>A cópia impressa está desatualizada para a missão ARTEX.</strong> A folha lista os
+        valores antigos do avião — <code>FENCE_ENABLE = 0</code>, <code>FENCE_TYPE = 4</code>,
+        <code>FENCE_ALT_MAX = 100</code>, <code>FENCE_RADIUS = 300</code>,
+        <code>RTL_AUTOLAND = 0</code>, <code>TECS_CLMB_MAX = 5</code>,
+        <code>TECS_SINK_MAX = 5</code>, <code>TECS_PITCH_MAX = 15</code>,
+        <code>TECS_PITCH_MIN = 0</code>, <code>TECS_TIME_CONST = 5</code>,
+        <code>PTCH_LIM_MAX_DEG = 25</code>, <code>WP_LOITER_RAD = 60</code>,
+        <code>FS_LONG_TIMEOUT = 5</code>, <code>BATT_LOW_MAH = 500</code>,
+        <code>BATT_CRT_MAH = 0</code>, <code>BATT_FS_LOW_ACT = 0</code>,
+        <code>BATT_FS_CRT_ACT = 0</code>. <strong>Essas 17 linhas têm de ser lidas com os valores
+        ARTEX</strong> (secção <a href="#parametros">Parâmetros</a>), ou reimprimir a folha.
+        O <code>ros2 run artex27 artex_check</code> verifica-as todas automaticamente.
+      </div>
+
+      <h3>Estrutura da folha (Calypso Pre-Flight Inspection)</h3>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Pág.</th><th>Secção</th><th>O que cobre</th><th>Relevante para o ARTEX</th></tr></thead>
+          <tbody>
+            <tr><td class="m">1</td><td class="m">1. Powertrain</td><td class="d">Tensão, colocação e fixação das baterias principais e secundárias; power modules (POWER1/POWER2); ESCs no Y-lead; VTX, Jetson e BEC no PDB; injeção de potência em S8.</td><td class="d"><strong class="hi">Crítico.</strong> 70 min de voo vivem da bateria principal.</td></tr>
+            <tr><td class="m">1</td><td class="m">2. Avionics</td><td class="d">Entradas do Pixhawk (GPS1 Here+, GPS2 M10 Mini, TELEM1 RP4TD, TELEM2 RFD868x, TELEM3 SIYI A8 Mini, CAN1 airspeed ASP1); servo rail S1–S8 (ailerons, flaps, V-tail, motores); câmara e Jetson.</td><td class="d"><strong class="hi">ASP1</strong> é a base de toda a conta de gradiente.</td></tr>
+            <tr><td class="m">1</td><td class="m">2.5 Sensors</td><td class="d">Calibração IMU e COMPASS; fix GPS 3D com HDOP &lt; 1,5 e NSATS &gt; 10; RTK; ASP1 lê ~0 m/s parado e responde a sopro; portas estática e dinâmica do pitot desobstruídas.</td><td class="d"><strong class="hi">O pitot é o item nº 1.</strong> Ver abaixo.</td></tr>
+            <tr><td class="m">1</td><td class="m">2.6 / 3 / 4</td><td class="d">Logging ativo e cartão SD inserido; ground station (RFD e RTK em tripé, HOME no ponto de descolagem, "Ready to Arm", contagem de células e tensão das baterias, verificação do horizonte artificial); controlador (packet rate 150 Hz, telemetry ratio 1:2, switch mode híbrido).</td><td class="d"><strong class="hi">Logging obrigatório</strong> — é a única forma de medir o consumo.</td></tr>
+            <tr><td class="m">2</td><td class="m">5. Control surfaces</td><td class="d">Em MANUAL: ailerons, V-tails e flaps trimados, sentido de cada comando, flaps 15° e 30°. Em FBWA: resposta correta a nose up/down e roll. Propulsão: spin a 5 %, thrust diferencial, hélices a girar para dentro.</td><td class="d">Standard.</td></tr>
+            <tr><td class="m">2–5</td><td class="m">6. Parameters</td><td class="d">6.1 identificação e arme · 6.2 rádio, switches e modos · 6.3 failsafes · 6.4 bateria · 6.5 sensores · 6.6 GPS · 6.7 comunicações · 6.8 saídas · 6.9 limites de voo e energia · 6.10 descolagem, aterragem, missão e navegação · 6.11 PIDs e autotune · 6.12 logging.</td><td class="d"><strong class="hi">17 linhas mudam.</strong> Ver o aviso acima.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Acrescentos específicos desta missão</h3>
+      <p class="muted">A folha da Calypso não os cobre — são consequência do que a missão ARTEX tem de diferente.</p>
+      <div class="grid2">
+        <div class="card">
+          <span class="k">Pitot e ASP1</span>
+          <p class="muted">
+            Portas estática e dinâmica limpas; <code>ASPD_OFFSET</code> recalibrado no solo, sem
+            vento; ASP1 responde a sopro. Todo o gradiente é calculado sobre
+            <code>AIRSPEED_CRUISE</code>: um pitot entupido falsifica o requisito dos 10 %.
+          </p>
+        </div>
+        <div class="card">
+          <span class="k">Vento em altitude</span>
+          <p class="muted">
+            Obter a previsão para 2000 m <em>antes</em> do voo e recalcular
+            <code>TECS_CLMB_MAX = 0,08 × (15 − W)</code>. Com W ≥ 10 m/s a missão
+            <strong>não voa</strong>.
+          </p>
+        </div>
+        <div class="card">
+          <span class="k"><code>RTL_AUTOLAND = 4</code></span>
+          <p class="muted">
+            Confirmar <em>antes</em> de carregar a missão. Com 0, o pre-arm falha com
+            <em>"DO_RETURN_PATH_START set and RTL_AUTOLAND disabled"</em>.
+          </p>
+        </div>
+        <div class="card">
+          <span class="k">Geofence carregada</span>
+          <p class="muted">
+            Com <code>FENCE_TYPE = 5</code> (bit do polígono), <strong>sem polígono de inclusão no
+            FCU o pre-arm falha</strong>. Confirmar com <code>artex_check</code>.
+          </p>
+        </div>
+        <div class="card">
+          <span class="k">Autonomia</span>
+          <p class="muted">
+            Bateria principal <strong>cheia e medida</strong>. Consumo médio em subida ainda não
+            medido: até estar, é o item que decide GO/NO-GO.
+          </p>
+        </div>
+        <div class="card">
+          <span class="k">Coordenação</span>
+          <p class="muted">
+            Autorização acima da Med-Hi Boundary (1371 m AMSL) confirmada com o Air Ops Control.
+            Elevação da pista obtida e metida no <code>config/artex27.yaml</code>.
+          </p>
+        </div>
+        <div class="card">
+          <span class="k">Failsafe de rádio</span>
+          <p class="muted">
+            Desligar o emissor no solo e <strong>ler o PWM real</strong> do recetor no canal de
+            acelerador. <code>THR_FS_VALUE = 950</code> é um valor por confirmar.
+          </p>
+        </div>
+        <div class="card">
+          <span class="k">Briefing do piloto</span>
+          <p class="muted">
+            Ponto e altitude combinados para a passagem a AUTO (~100 m sobre a pista). Em AUTO, a
+            rampa até ao primeiro item parte da <strong>posição e altitude atuais</strong>.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================================= -->
+    <section id="riscos">
+      <span class="label">Honestidade</span>
+      <h2>Riscos e pendências em aberto</h2>
+      <p class="muted">
+        Nada aqui está resolvido. Todos estes itens estão em
+        <code>artex27.params.OPEN_RISKS</code> e são impressos pelo <code>artex_check</code> no fim
+        de cada verificação.
+      </p>
+
+      <h3>1 · <code>TECS_SINK_MIN = 2.0</code> &gt; <code>TECS_SINK_MAX = 1.0</code></h3>
+      <div class="callout warn">
+        <code>TECS_SINK_MIN</code> é, por definição, <em>"minimum sink rate when at THR_MIN and
+        AIRSPEED_CRUISE"</em> — o afundamento do avião ao ralenti. Pedir uma descida a
+        <strong>1,0 m/s</strong> quando o avião afunda sozinho a <strong>2,0 m/s</strong> significa
+        que os ~31 min de descida têm de ser voados <strong>com motor</strong>, e os dois limites
+        ficam em contradição dentro do TECS: <code>AP_TECS.cpp:739</code> limita
+        <code>STEdot_dem</code> entre <code>−SINK_MIN·g</code> e <code>STEdot_max</code>, enquanto
+        <code>:1037</code> usa <code>−SINK_MAX·g</code> no laço de pitch.
+      </div>
+      <p class="muted"><strong class="hi">Proposta, por ordem:</strong></p>
+      <ul>
+        <li><strong>Medir o <code>SINK_MIN</code> real.</strong> É o que resolve de verdade e custa
+          um ensaio: planeio estabilizado a <code>THR_MIN</code> e 15 m/s, ler a razão de
+          afundamento no log. O 2,0 é um <em>default de fábrica</em>, nunca foi medido. Um
+          planador bem limpo a 15 m/s pode afundar a 1,0–1,5 m/s — e nesse caso o conflito
+          desaparece sozinho.</li>
+        <li><strong>Se o <code>SINK_MIN</code> real for ≥ 1,5:</strong> pôr
+          <code>TECS_SINK_MAX = SINK_MIN</code> e aceitar que a descida fica ao gradiente que o
+          avião dá ao ralenti. Com <code>SINK_MIN = 1,5</code> dão 15 % de gradiente e ~21 min —
+          excede os 10 %, mas <em>na descida</em>, onde o requisito ARTEX provavelmente não se
+          aplica. <strong>Confirmar com a organização</strong> se os 10 % valem só para a subida:
+          é a pergunta que desbloqueia este item e poupa ~20 min de autonomia.</li>
+        <li><strong>Enquanto não houver medida:</strong> manter 1,0, mas tratar a descida como
+          <em>descida com motor</em> e não como planeio — o que agrava o problema da autonomia
+          (item 2) e torna a medição ainda mais urgente.</li>
+        <li><strong>Não</strong> deixar <code>SINK_MIN</code> acima de <code>SINK_MAX</code> em voo
+          real sem ter visto o comportamento em SITL. A verificação é barata: descida completa de
+          2000 m em SITL com estes dois valores, a olhar para o acelerador e para a velocidade no
+          log TECS/CTUN. Se o acelerador ficar preso em valores altos durante os 31 min, o
+          consumo da descida deixa de ser desprezável e a conta de autonomia muda toda.</li>
+      </ul>
+
+      <h3>2 · O consumo médio nunca foi medido — e é o que bloqueia a missão</h3>
+      <p class="muted">
+        Subida (39,6 min com 5 m/s) + descida (31 min) ≈ <strong class="hi">70 min</strong> só para
+        subir e descer. Com <code>BATT_LOW_MAH = 8100</code> sobram 18 900 mAh utilizáveis antes do
+        RTL:
+      </p>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Consumo</th><th>Janela até ao RTL</th><th>Sem vento (26,4′ + 31′)</th><th>Vento 5 m/s (39,6′ + 31′)</th></tr></thead>
+          <tbody>
+            <tr><td class="m">15 A</td><td class="m">75,6′</td><td class="d">sobram 18,2′ para a missão</td><td class="d">sobram 5,0′ — apertado</td></tr>
+            <tr><td class="m">20 A</td><td class="m">56,7′</td><td class="d">−0,7′ — <strong class="hi">inviável</strong></td><td class="d">−13,9′ — <strong class="hi">inviável</strong></td></tr>
+            <tr><td class="m">25 A</td><td class="m">45,4′</td><td class="d">−12,0′ — inviável</td><td class="d">−25,2′ — inviável</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="muted">
+        <strong class="hi">Saídas:</strong> medir o consumo numa bancada ou num voo curto à potência
+        de subida; bateria maior; aceitar menos de 2000 m; encurtar a descida (ver item 1); ou subir
+        o <code>TECS_CLMB_MAX</code> e violar os 10 % — que é o que não se pode fazer.
+      </p>
+
+      <h3>3 · Pendências de dados</h3>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Dado em falta</th><th>O que bloqueia</th><th>Como obter</th></tr></thead>
+          <tbody>
+            <tr><td><strong class="hi">QFU real da pista</strong></td><td class="d">Eixo de aproximação; o 137,2° é geométrico.</td><td class="d">Levantamento no local. Depois <code>approach_brg:=&lt;QFU&gt;</code> e reverificar a contenção.</td></tr>
+            <tr><td><strong class="hi">Elevação do terreno (AMSL)</strong></td><td class="d">Verificação do teto de 3000 m AMSL; altitude absoluta do HOME.</td><td class="d">GPS / carta. <code>FENCE_ALT_MAX_TP = 1</code> contorna para a fence, mas não para a autorização.</td></tr>
+            <tr><td><strong class="hi">Vento previsto em altitude</strong></td><td class="d"><code>TECS_CLMB_MAX</code> e todo o tempo de subida.</td><td class="d">Previsão meteorológica; validar com a estimativa de vento do EKF durante a subida.</td></tr>
+            <tr><td>Afundamento ao ralenti</td><td class="d"><code>TECS_SINK_MIN</code>, e com ele o <code>SINK_MAX</code>.</td><td class="d">Planeio a <code>THR_MIN</code> e 15 m/s.</td></tr>
+            <tr><td>Razão de subida real a <code>THR_MAX</code></td><td class="d">Validação do <code>TECS_CLMB_MAX</code> (é o valor que teria <em>sem</em> restrição de gradiente).</td><td class="d">Subida a acelerador máximo, velocidade constante.</td></tr>
+            <tr><td><code>PTCH_TRIM_DEG</code> / AoA de trim</td><td class="d"><code>TECS_PITCH_MAX/MIN</code>, <code>PTCH_LIM_MAX_DEG</code>. Regra: <code>TECS_PITCH_MAX ≥ PTCH_TRIM_DEG + 6</code>.</td><td class="d">Voo nivelado estabilizado a 15 m/s; ler o pitch.</td></tr>
+            <tr><td>PWM de failsafe do recetor</td><td class="d">Validação do <code>THR_FS_VALUE = 950</code>.</td><td class="d">Desligar o emissor no solo e ler o PWM.</td></tr>
+            <tr><td>Nº de células da bateria</td><td class="d"><code>BATT_LOW_VOLT</code> / <code>BATT_CRT_VOLT</code>, hoje a 0 = desativados.</td><td class="d">Inspeção.</td></tr>
+            <tr><td><strong class="hi">Coordenação de espaço aéreo</strong></td><td class="d">A missão acima dos 1371 m AMSL.</td><td class="d">Air Ops Control / organização do ARTEX.</td></tr>
+            <tr><td>Missão principal a 2000 m</td><td class="d">Os itens 10 e 11 são placeholders.</td><td class="d">Definir com a organização; manter a 2000 m e dentro do círculo.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>4 · <code>TECS_TIME_CONST = 8</code> por validar</h3>
+      <p class="muted">
+        Confiança <strong class="hi">baixa</strong>. O mecanismo está confirmado no código, mas a
+        resposta real depende da planta. Teste em SITL: subida completa de 100 m a 2000 m com
+        <code>TECS_CLMB_MAX = 0.8</code>, a olhar para o log TECS/CTUN. Se o acelerador oscilar,
+        subir tc para 10 e/ou <code>TECS_THR_DAMP</code> de 0,5 para 0,7. Se ficar lento demais,
+        descer para 6.
+      </p>
+
+      <h3>5 · O que este código ainda não viu</h3>
+      <div class="callout warn">
+        O pacote compila, os módulos importam, a missão gerada valida (21 itens, sequência correta,
+        todos os pontos dentro do círculo) e é <strong>byte a byte idêntica</strong> ao
+        <code>.waypoints</code> estático já revisto. <strong>Nada foi voado nem simulado com este
+        código.</strong> Falta: correr em SITL, confirmar o raio efetivo a 2000 m, os failsafes a
+        várias altitudes, e o reengate do <code>DO_RETURN_PATH_START</code>.
+        A sequência está em <a href="#sitl">SITL de ponta a ponta</a>.
+      </div>
+    </section>
+
+    <!-- ================================================================= -->
+    <section id="ficheiros">
+      <span class="label">Mapa</span>
+      <h2>Ficheiros relevantes</h2>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Caminho</th><th>O que é</th></tr></thead>
+          <tbody>
+            <tr><td class="m">src/artex27/artex27/geo.py</td><td class="d">Constantes geográficas e geodesia. Só stdlib.</td></tr>
+            <tr><td class="m">src/artex27/artex27/profile.py</td><td class="d">As fórmulas: <code>tecs_clmb_max</code>, tempos, voltas, raio efetivo, gradiente, tabela de vento.</td></tr>
+            <tr><td class="m">src/artex27/artex27/mission.py</td><td class="d"><code>build_mission()</code> → <code>list[Waypoint]</code>, validação e serialização WPL.</td></tr>
+            <tr><td class="m">src/artex27/artex27/fence.py</td><td class="d"><code>build_fence()</code> → polígono de inclusão de 36 vértices (ou círculo).</td></tr>
+            <tr><td class="m">src/artex27/artex27/params.py</td><td class="d">Tabela <code>ARTEX_PARAMS</code> (valor + unidade + motivo) e <code>OPEN_RISKS</code>.</td></tr>
+            <tr><td class="m">src/artex27/artex27/nodes/</td><td class="d"><code>artex_mission_node.py</code> (carrega, não arma) e <code>artex_check_node.py</code> (pré-voo).</td></tr>
+            <tr><td class="m">src/artex27/config/artex27.yaml</td><td class="d">Altitudes, raio, rumo, vento, elevação do terreno. Lido pelos dois nós.</td></tr>
+            <tr><td class="m">src/artex27/missions/</td><td class="d"><code>.waypoints</code>, <code>.plan</code>, <code>kml/</code> e o README de como carregar nas GCS.</td></tr>
+            <tr><td class="m">src/artex27/params/artex27_diff.md</td><td class="d">A justificação de cada parâmetro, com referência ao código-fonte. <strong>É o documento que interessa ler.</strong></td></tr>
+            <tr><td class="m">src/artex27/docs/RECONCILIATION.md</td><td class="d"><strong class="hi">Manda sobre tudo</strong> em caso de conflito de números.</td></tr>
+            <tr><td class="m">src/artex27/docs/BRIEF.md</td><td class="d">Contexto, decisões do utilizador, geografia completa, pendências.</td></tr>
+            <tr><td class="m">src/artex27/tools/sim/</td><td class="d">SITL: <code>run_sitl.sh</code>, <code>test_climb_gradient.py</code>, <code>test_failsafes.py</code>, <code>analyze_log.py</code>.</td></tr>
+            <tr><td class="m">src/artex27/README.md</td><td class="d">Resumo técnico do pacote.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout">
+        <strong>Hierarquia dos documentos.</strong> Em caso de conflito manda
+        <code>docs/RECONCILIATION.md</code>, depois <code>params/artex27_diff.md</code>, depois
+        os READMEs individuais. Os tempos em <code>missions/README.md</code> foram calculados com
+        <code>TECS_CLMB_MAX = 1.20</code> e estão <strong>desatualizados</strong> — valem os desta
+        página.
+      </div>
+    </section>
+
+  </main>
+
+  <footer>
+    <span>ATLAS · AeroTec · missão ARTEX 26</span>
+    <span>ArduPlane 4.8.0-dev · ROS 2 Humble · MAVROS</span>
+    <span>pacote <code>artex27</code></span>
+  </footer>
+
+</div>
+
+<script>
+  // Realce da secção ativa no índice
+  var links = Array.prototype.slice.call(document.querySelectorAll('nav.toc a'));
+  var map = {};
+  links.forEach(function (a) { map[a.getAttribute('href').slice(1)] = a; });
+  var obs = new IntersectionObserver(function (entries) {
+    entries.forEach(function (e) {
+      if (e.isIntersecting) {
+        links.forEach(function (l) { l.classList.remove('active'); });
+        var a = map[e.target.id];
+        if (a) a.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-10% 0px -80% 0px', threshold: 0 });
+  document.querySelectorAll('main section[id]').forEach(function (s) { obs.observe(s); });
+</script>
+</body>
+</html>
