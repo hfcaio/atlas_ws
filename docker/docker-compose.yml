@@ -14,6 +14,7 @@ x-atlas: &atlas
   build:
     context: .
     dockerfile: Dockerfile
+    network: host        # build usa o DNS/rede do host (sem isto: 'Could not resolve host')
     args:
       ARDUPILOT_REF: ${ARDUPILOT_REF:-master}
       BUILD_ARDUPILOT: ${BUILD_ARDUPILOT:-1}
