@@ -1,0 +1,167 @@
+#!/usr/bin/env bash
+# ap-multi : N drones (ArduCopter) no MESMO mundo Gazebo, num container so.
+#
+#   ap-multi [up] [N]   sobe Gazebo + N SITL + N MAVROS      (N=2 por defeito)
+#   ap-multi demo [N]   o mesmo + um drone_agent por drone  (missao + comunicacao)
+#   ap-multi down       desliga tudo
+#   ap-multi gen [N]    so gera o mundo e os modelos (nao arranca nada)
+#
+# O que faz (e porque nao usa o iris.launch.py do ardupilot_gz):
+#   * gera um mundo com N iris JA DENTRO (nada de "spawn" em runtime);
+#     cada iris tem o seu fdm_port_in (9002, 9012, ...);
+#   * arranca N `arducopter` com --instance i / --sysid i+1 (portas +10*i),
+#     SEM --use_sim_time (so existe se o binario tiver DDS);
+#   * arranca N MAVROS (apm.launch) em /drone1, /drone2, ...
+#   Topicos: /droneK/mavros/...   SITL: tcp 5760 + 10*(K-1)
+#
+# Env:
+#   GUI=1          abre tambem a janela do Gazebo (gz sim -g). Default: so servidor.
+#   SPEEDUP=1      aceleracao do SITL
+#   SPACING=3      distancia (m) entre drones no eixo X
+#   WIPE=1         apaga os parametros guardados do SITL (-w)
+#   GCS=1          MAVROS reencaminha MAVLink para a QGC em udp 14550
+#   NO_TMUX=1      sem tmux: processos em background, logs em $ATLAS_WS/.multi_sim/logs
+#   SETTLE=20      segundos entre Gazebo e SITL / SITL e MAVROS (PC lento: 40)
+#
+# Frame: com este mundo o frame local do mavros de cada drone coincide com o
+# mundo do Gazebo (todos os SITL partem da mesma origem GPS). Por isso os
+# waypoints do drone_agent sao em coordenadas do mundo, com origin_x/y = 0.
+set -euo pipefail
+
+CMD="${1:-up}"
+case "${CMD}" in up|demo|down|gen) shift || true ;; [0-9]*) CMD=up ;; *) echo "uso: ap-multi [up|demo|down|gen] [N]" >&2; exit 1 ;; esac
+N="${1:-${N:-2}}"
+
+: "${ATLAS_WS:=/home/ros/atlas_ws}"
+OUT="${ATLAS_WS}/.multi_sim"
+SESSION="${SESSION:-multi}"
+SETTLE="${SETTLE:-20}"
+SPACING="${SPACING:-3}"
+SPEEDUP="${SPEEDUP:-1}"
+
+down() {
+  tmux kill-session -t "${SESSION}" 2>/dev/null || true
+  for p in mavros_node arducopter ruby; do pkill -9 -x "$p" 2>/dev/null || true; done
+  pkill -9 -f "[g]z sim" 2>/dev/null || true
+  pkill -9 -f "[d]rone_agent.py" 2>/dev/null || true
+}
+if [ "${CMD}" = "down" ]; then down; echo ">> desligado"; exit 0; fi
+
+# ------------------------------------------------------------------ gerar
+GZSRC="${ATLAS_WS}/src/ardupilot_gazebo"
+[ -d "${GZSRC}/models/iris_with_ardupilot" ] || { echo "!! falta ${GZSRC}/models/iris_with_ardupilot (corre atlas-ws-init)" >&2; exit 1; }
+[ -f "${GZSRC}/worlds/iris_runway.sdf" ]     || { echo "!! falta ${GZSRC}/worlds/iris_runway.sdf" >&2; exit 1; }
+
+mkdir -p "${OUT}/models" "${OUT}/worlds" "${OUT}/logs"
+python3 - "${GZSRC}" "${OUT}" "${N}" "${SPACING}" <<'PY'
+import os, re, sys
+src, out, n, spacing = sys.argv[1], sys.argv[2], int(sys.argv[3]), float(sys.argv[4])
+base = open(f"{src}/models/iris_with_ardupilot/model.sdf").read()
+if "<fdm_port_in>9002</fdm_port_in>" not in base or '<model name="iris_with_ardupilot">' not in base:
+    sys.exit("!! formato inesperado de iris_with_ardupilot/model.sdf (fdm_port_in 9002 / nome do modelo)")
+for i in range(1, n + 1):
+    d = f"{out}/models/iris_ap{i}"
+    os.makedirs(d, exist_ok=True)
+    s = base.replace('<model name="iris_with_ardupilot">', f'<model name="iris_ap{i}">', 1)
+    s = s.replace("<fdm_port_in>9002</fdm_port_in>", f"<fdm_port_in>{9002 + 10 * (i - 1)}</fdm_port_in>")
+    open(f"{d}/model.sdf", "w").write(s)
+    open(f"{d}/model.config", "w").write(
+        f'<?xml version="1.0"?>\n<model><name>iris_ap{i}</name><version>1.0</version>'
+        f'<sdf version="1.9">model.sdf</sdf></model>\n')
+w = open(f"{src}/worlds/iris_runway.sdf").read()
+w = w.replace('<world name="iris_runway">', f'<world name="multi_iris_runway">', 1)
+# sem camaras nos iris -> o sistema Sensors (render) so pesa; fora.
+w = re.sub(r'<plugin\s+filename="gz-sim-sensors-system".*?</plugin>', "", w, flags=re.S)
+incs = "\n".join(
+    f'    <include>\n      <uri>model://iris_ap{i}</uri>\n      <name>drone{i}</name>\n'
+    f'      <pose degrees="true">{(i - 1) * spacing} 0 0.195 0 0 90</pose>\n    </include>'
+    for i in range(1, n + 1))
+w, k = re.subn(r'<include>\s*<uri>model://iris_with_(?:gimbal|ardupilot)</uri>.*?</include>', incs, w, count=1, flags=re.S)
+if k != 1:
+    sys.exit("!! nao encontrei o <include> do iris em iris_runway.sdf")
+open(f"{out}/worlds/multi_iris_runway.sdf", "w").write(w)
+print(f">> gerado: {out}/worlds/multi_iris_runway.sdf ({n} drones, espacamento {spacing} m)")
+PY
+[ "${CMD}" = "gen" ] && exit 0
+
+# --------------------------------------------------------------- verificar
+for c in gz arducopter ros2 python3; do
+  command -v "$c" >/dev/null || { echo "!! '$c' nao esta no PATH (workspace compilado? atlas-build)" >&2; exit 1; }
+done
+: "${ARDUPILOT_HOME:=${ATLAS_WS}/src/ardupilot}"
+DEF="${ARDUPILOT_HOME}/Tools/autotest/default_params"
+[ -f "${DEF}/copter.parm" ] && [ -f "${DEF}/gazebo-iris.parm" ] || { echo "!! faltam copter.parm/gazebo-iris.parm em ${DEF}" >&2; exit 1; }
+ARDU="$(command -v arducopter)"
+
+export GZ_SIM_RESOURCE_PATH="${OUT}/models:${GZSRC}/models:${GZSRC}/worlds:${ATLAS_WS}/src${GZ_SIM_RESOURCE_PATH:+:${GZ_SIM_RESOURCE_PATH}}"
+export SDF_PATH="${GZ_SIM_RESOURCE_PATH}"
+[ -d "${GZSRC}/build" ] && export GZ_SIM_SYSTEM_PLUGIN_PATH="${GZSRC}/build${GZ_SIM_SYSTEM_PLUGIN_PATH:+:${GZ_SIM_SYSTEM_PLUGIN_PATH}}"
+
+# ---------------------------------------------------------------- comandos
+WORLD="${OUT}/worlds/multi_iris_runway.sdf"
+GZ_CMD="gz sim -s -r -v3 ${WORLD}"
+sitl_cmd() { # i (1-based)
+  local i=$1 k=$(( $1 - 1 ))
+  mkdir -p "${OUT}/sitl${i}"
+  echo "cd ${OUT}/sitl${i} && ${ARDU} --model json --speedup ${SPEEDUP} --slave 0 --sim-address=127.0.0.1 --instance ${k} --sysid ${i} ${WIPE:+-w} --defaults ${DEF}/copter.parm,${DEF}/gazebo-iris.parm"
+}
+mavros_cmd() {
+  local i=$1 k=$(( $1 - 1 )) g=""
+  [ "${GCS:-0}" = "1" ] && g="gcs_url:=udp://@127.0.0.1:14550"
+  echo "ros2 launch mavros apm.launch fcu_url:=tcp://127.0.0.1:$((5760 + 10 * k)) tgt_system:=${i} namespace:=drone${i} ${g}"
+}
+agent_cmd() { # i
+  # Altitudes separadas (drone K a 5+3*(K-1) m): o quadrado do drone1 passa por
+  # cima do ponto onde o drone2 faz loiter, e a mesma altitude daria colisao.
+  local i=$1 z=$(( 5 + 3 * ($1 - 1) ))
+  local A="python3 ${ATLAS_WS}/docs/multi_missoes/drone_agent.py --ros-args -r __ns:=/drone${i} -p takeoff_alt:=${z}.0 -p land_at_end:=true"
+  if [ "$i" = "1" ]; then
+    echo "${A} -p waypoints:='0,0,5;10,0,5;10,10,5;0,10,5' -p peer_ns:=/drone2 -p notify_at_wp:=2 -p notify_wp:='$([ "$N" -gt 1 ] && echo "${SPACING}" || echo 0),12,8'"
+  else
+    echo "${A} -p wait_for_cmd:=true"
+  fi
+}
+
+down
+echo ">> ${N} drones | mundo ${WORLD}"
+echo ">> arducopter: ${ARDU}"
+
+if [ "${NO_TMUX:-0}" = "1" ]; then
+  L="${OUT}/logs"
+  ( eval "${GZ_CMD}" > "${L}/gz.log" 2>&1 & )
+  sleep "${SETTLE}"
+  for i in $(seq 1 "${N}"); do ( eval "$(sitl_cmd "$i")" > "${L}/sitl${i}.log" 2>&1 & ); done
+  sleep 5
+  for i in $(seq 1 "${N}"); do ( eval "$(mavros_cmd "$i")" > "${L}/mavros${i}.log" 2>&1 & ); done
+  if [ "${CMD}" = "demo" ]; then
+    sleep "${SETTLE}"
+    for i in $(seq "${N}" -1 1); do ( eval "$(agent_cmd "$i")" > "${L}/agent${i}.log" 2>&1 & ); done
+  fi
+  echo ">> a correr em background. logs: ${L}   desligar: ap-multi down"
+  exit 0
+fi
+
+# 3 janelas tmux (Ctrl-b n / Ctrl-b p muda de janela) para nao ficar tudo
+# espremido: [sim] Gazebo + SITLs | [mavros] MAVROS | [agents] drone_agents
+tmux new-session -d -s "${SESSION}" -n sim "${GZ_CMD}; bash"
+for i in $(seq 1 "${N}"); do
+  tmux split-window -t "${SESSION}":sim "sleep ${SETTLE}; $(sitl_cmd "$i"); bash"
+  tmux select-layout -t "${SESSION}":sim tiled
+done
+tmux new-window -t "${SESSION}" -n mavros "sleep $(( SETTLE + 8 )); $(mavros_cmd 1); bash"
+for i in $(seq 2 "${N}"); do
+  tmux split-window -t "${SESSION}":mavros "sleep $(( SETTLE + 8 )); $(mavros_cmd "$i"); bash"
+  tmux select-layout -t "${SESSION}":mavros tiled
+done
+if [ "${CMD}" = "demo" ]; then
+  tmux new-window -t "${SESSION}" -n agents "sleep $(( SETTLE + 12 )); $(agent_cmd "${N}"); bash"
+  for i in $(seq $(( N - 1 )) -1 1); do
+    tmux split-window -t "${SESSION}":agents "sleep $(( SETTLE + 12 )); $(agent_cmd "$i"); bash"
+    tmux select-layout -t "${SESSION}":agents tiled
+  done
+fi
+[ "${GUI:-0}" = "1" ] && tmux new-window -t "${SESSION}" -n gui "sleep 8; gz sim -g; bash"
+tmux select-window -t "${SESSION}":sim
+echo ">> tmux '${SESSION}': janelas sim | mavros | agents. Ctrl-b n/p troca, Ctrl-b d sai."
+echo ">> voltar: tmux attach -t ${SESSION}   desligar: ap-multi down"
+if [ -t 1 ]; then exec tmux attach -t "${SESSION}"; fi

@@ -23,6 +23,8 @@ cd ~/git_projects/atlas_ws/docker
 docker compose run --rm dev ros2 launch atlas_mission mission.launch.py
 ```
 
+**Vários drones no mesmo mundo:** `docker compose run --rm dev ap-multi demo` (ver `ap-help multi`).
+
 `ap-sim` abre tmux (`Ctrl-b →` troca painel, `Ctrl-b d` destaca). `vehicle` = `copter|plane|vtol`.
 A GUI precisa do `xhost` + GPU (o compose usa `privileged` → `/dev/dri`); sem GPU o render é por
 software (lento). Headless (sem janela, p/ CI): `HEADLESS=1 docker compose up -d gazebo sitl mavros`.
