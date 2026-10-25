@@ -1,0 +1,44 @@
+# fixture_sitl.param — SO PARA SMOKE-TEST DOS SCRIPTS DE SIMULACAO.
+# NAO e' o ficheiro de parametros da missao: esse e' artex_2000m/params/artex_2000m_sitl.param,
+# produzido pelo agente de parametros. Usa este apenas para verificar que os
+# scripts correm quando o outro ainda nao existe.
+# Valores de BRIEF.md secao 4 + as restricoes de gradiente de BRIEF.md secao 5.
+AIRSPEED_CRUISE   15
+AIRSPEED_MIN      14
+AIRSPEED_MAX      27
+TECS_CLMB_MAX     1.2
+TECS_SINK_MAX     5
+TECS_SINK_MIN     2
+TECS_PITCH_MAX    7
+TECS_TIME_CONST   5
+PTCH_LIM_MAX_DEG  15
+PTCH_LIM_MIN_DEG  -25
+THR_MAX           100
+THR_MIN           0
+WP_LOITER_RAD     150
+WP_RADIUS         60
+NAVL1_PERIOD      17
+MIS_RESTART       0
+FENCE_ENABLE      0
+RTL_AUTOLAND      4
+RTL_ALTITUDE      300
+RTL_RADIUS        150
+RTL_CLIMB_MIN     0
+FS_LONG_ACTN      1
+FS_SHORT_ACTN     0
+FS_LONG_TIMEOUT   5
+FS_SHORT_TIMEOUT  1.5
+THR_FAILSAFE      1
+THR_FS_VALUE      950
+FS_GCS_ENABL      1
+RC_FS_TIMEOUT     1
+BATT_CAPACITY     27000
+BATT_LOW_VOLT     11.0
+BATT_CRT_VOLT     10.2
+BATT_LOW_MAH      5000
+BATT_CRT_MAH      2500
+BATT_LOW_TIMER    10
+BATT_FS_LOW_ACT   1
+BATT_FS_CRT_ACT   1
+TKOFF_ALT         100
+TKOFF_DIST        400

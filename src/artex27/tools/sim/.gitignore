@@ -1,0 +1,11 @@
+# Estado de execucao do SITL (eeprom, logs .BIN/.tlog, cache de terreno).
+# Regenerado a cada ./run_sitl.sh — nao vai para o git.
+run/
+
+# Resultados dos testes: sao versionados APENAS os ficheiros de referencia
+# listados no README (results/ref_*). O resto e' saida de corridas pontuais.
+results/*
+!results/ref_*
+
+__pycache__/
+*.pyc

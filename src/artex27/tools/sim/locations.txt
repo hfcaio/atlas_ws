@@ -1,0 +1,30 @@
+# locations.txt do ARTEX — ficheiro de utilizador do sim_vehicle.py
+#
+# NAO editar src/ardupilot/Tools/autotest/locations.txt (e submodulo upstream).
+# O sim_vehicle.py le primeiro o ficheiro apontado por $ARDUPILOT_LOCATIONS
+# (parse_locations(), Tools/autotest/sim_vehicle.py:735), e so' depois o do
+# Tools/autotest. Basta portanto:
+#
+#   export ARDUPILOT_LOCATIONS=<caminho>/artex_2000m/sim/locations.txt
+#   sim_vehicle.py -v ArduPlane -f plane -L ARTEX_RUNWAY
+#
+# O run_sitl.sh faz isto sozinho.
+#
+# Formato: NAME=latitude,longitude,altitude-absoluta-m,heading-deg
+#
+# PENDENCIA: a elevacao do terreno na pista NAO esta confirmada (BRIEF.md secao 8).
+# Os 100 m usados abaixo sao um valor de trabalho; so' afecta a conversao
+# rel<->AMSL, nao o perfil de subida (que e' relativo ao home).
+
+# Marcador "Runway" do KML. E' AQUI que a missao artex_2000m.waypoints poe o
+# HOME, por isso e' esta a location por omissao do run_sitl.sh.
+# Heading 317.2 = azimute pista->centro do circulo UAS (o eixo de aproximacao
+# escolhido pelo agente de missao; o QFU real da pista ainda nao e' conhecido).
+ARTEX_RUNWAY=39.3993570,-8.2864182,100,317
+
+# Centro do circulo "UAS TO/LD Area 11 TF" (raio 997,25 m, teto 3000 m AMSL).
+# E' onde fica a espiral de LOITER_TO_ALT.
+ARTEX=39.4054602,-8.2937286,100,0
+
+# Pista com o aviao apontado no sentido da aproximacao (137.2 = centro->pista).
+ARTEX_RUNWAY_137=39.3993570,-8.2864182,100,137
