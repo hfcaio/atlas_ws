@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+<Document>
+  <name>Runway</name>
+  <Placemark>
+    <name>Runway</name>
+    <description>geometry=Point alt_amsl=0.0</description>
+    <Point><coordinates>-8.2864182,39.3993570,0.0</coordinates></Point>
+  </Placemark>
+</Document>
+</kml>

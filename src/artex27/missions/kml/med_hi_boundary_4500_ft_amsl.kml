@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+<Document>
+  <name>Med-Hi Boundary 4500 ft AMSL</name>
+  <Placemark>
+    <name>Med-Hi Boundary 4500 ft AMSL</name>
+    <description>geometry=LinearRing alt_amsl=1371.0</description>
+    <Polygon>
+      <tessellate>1</tessellate>
+      <outerBoundaryIs><LinearRing><coordinates>
+        -8.3586260,39.3052460,1371.0
+        -8.1586470,39.3051410,1371.0
+        -8.2512210,39.4078310,1371.0
+        -8.3597620,39.4086440,1371.0
+        -8.3586260,39.3052460,1371.0
+      </coordinates></LinearRing></outerBoundaryIs>
+    </Polygon>
+  </Placemark>
+</Document>
+</kml>

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+<Document>
+  <name>LP-TRA56</name>
+  <Placemark>
+    <name>LP-TRA56</name>
+    <description>geometry=LinearRing alt_amsl=3000.0</description>
+    <Polygon>
+      <tessellate>1</tessellate>
+      <outerBoundaryIs><LinearRing><coordinates>
+        -8.4946110,39.4254690,3000.0
+        -8.4495380,39.3836200,3000.0
+        -8.3596780,39.4097130,3000.0
+        -8.2689390,39.4097440,3000.0
+        -8.2816590,39.5363340,3000.0
+        -8.4513340,39.5152240,3000.0
+        -8.4946110,39.4254690,3000.0
+      </coordinates></LinearRing></outerBoundaryIs>
+    </Polygon>
+  </Placemark>
+</Document>
+</kml>

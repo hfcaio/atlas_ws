@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+<Document>
+  <name>UAS TO/LD Area 11 TF</name>
+  <Placemark>
+    <name>UAS TO/LD Area 11 TF</name>
+    <description>geometry=Point alt_amsl=0.0</description>
+    <Point><coordinates>-8.2937569,39.4054886,0.0</coordinates></Point>
+  </Placemark>
+</Document>
+</kml>

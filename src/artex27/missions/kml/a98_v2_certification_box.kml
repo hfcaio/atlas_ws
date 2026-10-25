@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+<Document>
+  <name>A98 v2 Certification Box</name>
+  <Placemark>
+    <name>A98 v2 Certification Box</name>
+    <description>geometry=LinearRing alt_amsl=1000.0</description>
+    <Polygon>
+      <tessellate>1</tessellate>
+      <outerBoundaryIs><LinearRing><coordinates>
+        -8.3008855,39.3956581,1000.0
+        -8.3086651,39.4038965,1000.0
+        -8.3230916,39.3967286,1000.0
+        -8.3150996,39.3861191,1000.0
+        -8.3032300,39.3919290,1000.0
+        -8.3008855,39.3956581,1000.0
+      </coordinates></LinearRing></outerBoundaryIs>
+    </Polygon>
+  </Placemark>
+</Document>
+</kml>

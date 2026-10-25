@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+<Document>
+  <name>LP-D25 segregated airspace</name>
+  <Placemark>
+    <name>LP-D25 segregated airspace</name>
+    <description>geometry=LinearRing alt_amsl=4267.0</description>
+    <Polygon>
+      <tessellate>1</tessellate>
+      <outerBoundaryIs><LinearRing><coordinates>
+        -8.3586260,39.3052460,4267.0
+        -8.1586470,39.3051410,4267.0
+        -8.2512210,39.4078310,4267.0
+        -8.3597620,39.4086440,4267.0
+        -8.3586260,39.3052460,4267.0
+      </coordinates></LinearRing></outerBoundaryIs>
+    </Polygon>
+  </Placemark>
+</Document>
+</kml>

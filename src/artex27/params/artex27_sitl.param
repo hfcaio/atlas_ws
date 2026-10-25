@@ -1,0 +1,164 @@
+# artex_2000m_sitl.param - ArduPlane 4.8.0-dev - missao ARTEX 2000 m
+#
+# DELTA, nao arquivo completo. Carregar POR CIMA dos defaults do SITL:
+#   sim_vehicle.py -v ArduPlane -f plane --add-param-file=<este arquivo>
+# ou, com o SITL ja a correr, no MAVProxy:
+#   param load artex_2000m_sitl.param
+#
+# Contem apenas: (a) os valores de missao do artex_2000m.param e
+# (b) os SIM_* de apoio aos testes de failsafe.
+#
+# NAO contem, de proposito:
+#   - calibracao de bussola / acelerometro / giro (COMPASS_*, INS_*)
+#   - calibracao e IDs do sensor de velocidade (ARSPD_DEVID/OFFSET/RATIO/PIN/BUS)
+#   - pinos e escalas do monitor de bateria (BATT_*_PIN, BATT_VOLT_MULT, BATT_AMP_PERVLT)
+#   - RC, SERVO*, SERIAL*, telemetria, logging
+#   - ganhos de PID do aviao real (RLL_RATE_*, PTCH_RATE_*, YAW_RATE_*, *2SRV_*)
+#     -> o modelo do SITL nao e o aviao real; usar os ganhos default do SITL.
+
+# ---------------------------------------------------------------------------
+# Envelope de velocidade (do aviao real)
+# ---------------------------------------------------------------------------
+AIRSPEED_CRUISE,15
+AIRSPEED_MIN,14
+AIRSPEED_MAX,27
+AIRSPEED_STALL,0
+STALL_PREVENTION,1
+TRIM_THROTTLE,50
+THR_MAX,100
+THR_MIN,0
+THR_SLEWRATE,100
+
+# ---------------------------------------------------------------------------
+# Gradiente de subida <= 10 % / TECS
+#   TECS_CLMB_MAX = 0.08 * (AIRSPEED_CRUISE - vento). 0.8 = vento de 5 m/s.
+#   Ver tabela em artex_2000m_diff.md antes de alterar.
+# ---------------------------------------------------------------------------
+TECS_CLMB_MAX,1.4
+TECS_SINK_MIN,2
+TECS_SINK_MAX,1.4
+TECS_PITCH_MAX,10
+TECS_PITCH_MIN,-15
+TECS_TIME_CONST,8
+TECS_HDEM_TCONST,3
+TECS_SPDWEIGHT,1
+TECS_THR_DAMP,0.5
+TECS_PTCH_DAMP,0.3
+TECS_INTEG_GAIN,0.3
+TECS_RLL2THR,10
+PTCH_LIM_MAX_DEG,15
+PTCH_LIM_MIN_DEG,-25
+PTCH_TRIM_DEG,0
+ROLL_LIMIT_DEG,45
+LEVEL_ROLL_LIMIT,5
+
+# ---------------------------------------------------------------------------
+# Navegacao e missao
+# ---------------------------------------------------------------------------
+ALT_SLOPE_MIN,15
+ALT_SLOPE_MAXHGT,5
+WP_LOITER_RAD,200
+WP_RADIUS,35
+WP_MAX_RADIUS,0
+NAVL1_PERIOD,17
+NAVL1_DAMPING,0.75
+MIS_RESTART,0
+MIS_OPTIONS,0
+FLIGHT_OPTIONS,16
+
+# ---------------------------------------------------------------------------
+# RTL + regresso por DO_RETURN_PATH_START
+# ---------------------------------------------------------------------------
+RTL_AUTOLAND,4
+RTL_ALTITUDE,70
+RTL_RADIUS,60
+RTL_CLIMB_MIN,0
+
+# ---------------------------------------------------------------------------
+# Aterragem automatica (usada no failsafe)
+# ---------------------------------------------------------------------------
+LAND_TYPE,0
+TECS_LAND_ARSPD,14.5
+TECS_LAND_THR,-1
+TECS_LAND_SINK,0.25
+TECS_LAND_PMAX,10
+TECS_LAND_TCONST,2
+TECS_LAND_DAMP,0.5
+TECS_LAND_SPDWGT,-1
+TECS_APPR_SMAX,2
+LAND_FLARE_ALT,3
+LAND_FLARE_SEC,2
+LAND_FLARE_AIM,50
+LAND_PITCH_DEG,0
+LAND_PF_ALT,10
+LAND_PF_SEC,6
+LAND_PF_ARSPD,0
+LAND_WIND_COMP,50
+LAND_OPTIONS,0
+LAND_SLOPE_RCALC,2
+LAND_ABORT_DEG,0
+LAND_DISARMDELAY,20
+
+# ---------------------------------------------------------------------------
+# Failsafes
+# ---------------------------------------------------------------------------
+THR_FAILSAFE,1
+THR_FS_VALUE,950
+FS_SHORT_ACTN,0
+FS_LONG_ACTN,1
+FS_LONG_TIMEOUT,10
+FS_GCS_ENABL,1
+FS_EKF_THRESH,0.8
+
+# ---------------------------------------------------------------------------
+# Fence
+#   FENCE_TYPE 5 = bit0 (altitude max) + bit2 (inclusao/exclusao).
+#   O bit2 EXIGE o ficheiro de geofence carregado, senao da pre-arm
+#   "Polygon fence(s) invalid". Para testar sem o ficheiro, usar FENCE_TYPE 1.
+# ---------------------------------------------------------------------------
+FENCE_ENABLE,1
+FENCE_TYPE,5
+FENCE_ACTION,1
+FENCE_ALT_MAX,2100
+FENCE_ALT_MAX_TP,1
+FENCE_ALT_MIN,-10
+FENCE_RADIUS,300
+FENCE_MARGIN,2
+FENCE_AUTOENABLE,3
+FENCE_OPTIONS,1
+FENCE_RET_ALT,0
+FENCE_RET_RALLY,0
+
+# ---------------------------------------------------------------------------
+# Bateria (premissa: reserva de 30 % / 20 % de 27 000 mAh)
+# ---------------------------------------------------------------------------
+BATT_CAPACITY,34700
+BATT_LOW_MAH,12000
+BATT_CRT_MAH,8000
+BATT_LOW_VOLT,0
+BATT_CRT_VOLT,0
+BATT_LOW_TIMER,10
+BATT_FS_LOW_ACT,1
+BATT_FS_CRT_ACT,2
+BATT_FS_VOLTSRC,0
+
+# ---------------------------------------------------------------------------
+# Quadplane desligado (aviao de asa fixa puro)
+#   Q_RTL_MODE != 0 com RTL_AUTOLAND != 0 falha o pre-arm.
+# ---------------------------------------------------------------------------
+Q_ENABLE,0
+
+# ---------------------------------------------------------------------------
+# Simulacao (SIM_*) - estado de repouso. O agente de simulacao altera
+# estes valores durante os testes e repoe-os no fim.
+# ---------------------------------------------------------------------------
+# SIM_RC_FAIL: 0=normal, 1=sem pulsos de RC, 2=canais neutros com throttle 950us
+SIM_RC_FAIL,0
+# Vento: SPD em m/s, DIR em graus verdadeiros (direcao DE onde sopra)
+SIM_WIND_SPD,0
+SIM_WIND_DIR,180
+SIM_WIND_TURB,0
+# Bateria simulada: CAP_AH = BATT_CAPACITY/1000 para que o failsafe por mAh dispare
+SIM_BATT_CAP_AH,27
+SIM_BATT_VOLTAGE,12.6
+SIM_SPEEDUP,1
