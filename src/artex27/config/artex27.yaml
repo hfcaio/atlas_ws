@@ -1,0 +1,73 @@
+# Configuracao da missao ARTEX 2000 m.
+#
+#   ros2 run artex27 artex_mission --ros-args --params-file \
+#       $(ros2 pkg prefix artex27)/share/artex27/config/artex27.yaml
+#
+# Os dois nos (`artex_mission` e `artex_check`) leem daqui. O `/**` aplica a
+# ambos; cada no ignora as chaves que nao declarou.
+/**:
+  ros__parameters:
+
+    # Prefixo MAVROS do veiculo. Validos: mavros, drone, vtol, icarus, prometeu.
+    vehicle: "mavros"
+
+    # ------------------------------------------------------------------
+    # Perfil vertical. Altitudes RELATIVAS ao ponto de descolagem, em metros.
+    # ------------------------------------------------------------------
+    # Espiral de subida: 9 degraus, ganhos de 200 m (x7) e 250 m (x2).
+    climb_steps_m: [300.0, 500.0, 700.0, 900.0, 1100.0, 1300.0, 1500.0, 1750.0, 2000.0]
+
+    # Espiral de descida no caminho de retorno. O ultimo degrau (140 m) e' a
+    # altitude da porta de entrada da final.
+    descent_steps_m: [1500.0, 1000.0, 500.0, 140.0]
+
+    # Raio comandado em param2 dos LOITER_TO_ALT. Com NAVL1_LIM_BANK = 0 o raio
+    # efetivo cresce com a altitude (x EAS2TAS^2): 400 m -> ~487 m a 2000 m.
+    loiter_radius_m: 400.0
+
+    # ------------------------------------------------------------------
+    # Aproximacao
+    # ------------------------------------------------------------------
+    # Rumo de aproximacao em graus. -1.0 = usar o rumo geometrico calculado,
+    # centro do circulo -> pista (137,2 deg). NAO e' o QFU real da pista: o KML
+    # so traz um ponto, sem eixo. E' a escolha que mantem a final dentro do
+    # circulo UAS, porque a pista esta' a apenas 71,5 m da borda.
+    # PENDENCIA: substituir pelo QFU real quando for conhecido.
+    approach_brg: -1.0
+
+    # true -> variante de pouso MANUAL: a missao termina em LOITER_UNLIM a 150 m
+    # e o piloto assume. A sequencia de retorno automatico do failsafe fica
+    # intocada em qualquer dos casos.
+    manual_land: false
+
+    # ------------------------------------------------------------------
+    # Geofence de inclusao (area UAS TO/LD Area 11 TF, raio 997,25 m)
+    # ------------------------------------------------------------------
+    push_fence: true
+    fence_inset_m: 20.0      # recuo para dentro da borda do circulo
+    fence_vertices: 36
+    fence_circle: false      # true -> FENCE_CIRCLE_INCLUSION em vez do poligono
+
+    # ------------------------------------------------------------------
+    # PENDENCIAS. Nao inventar valores.
+    # ------------------------------------------------------------------
+    # Elevacao do terreno na pista, em metros AMSL. Sem ela nao se verifica o
+    # teto de 3000 m AMSL da area UAS. -1.0 = DESCONHECIDA.
+    terrain_elev_amsl_m: -1.0
+
+    # Altitude ABSOLUTA do item 0 (HOME) do ficheiro de missao. O ArduPilot
+    # reescreve-a com o home real no arme, por isso 0.0 e' aceitavel.
+    home_amsl_m: 0.0
+
+    # Vento de frente previsto em altitude [m/s]. Entra em
+    # TECS_CLMB_MAX = 0,08 x (AIRSPEED_CRUISE - vento). 5 m/s e' a premissa de
+    # projeto; com 10 m/s a subida sozinha leva 79 min e a missao deixa de caber
+    # na autonomia.
+    design_wind_ms: 5.0
+
+    # ------------------------------------------------------------------
+    # Comportamento dos nos
+    # ------------------------------------------------------------------
+    abort_on_validation_error: true   # artex_mission: nao carrega nada se a validacao falhar
+    check_params: true                # artex_check: compara os parametros do FCU
+    timeout_s: 20.0                   # artex_check: espera pela missao vinda do FCU
