@@ -1,0 +1,231 @@
+#!/usr/bin/env bash
+# ap-help [topico] : manual curto do ambiente atlas-sim
+#
+# Dentro do container:  ap-help [topico]
+# No host:              bash ~/git_projects/atlas_ws/docker/scripts/ap-help [topico]
+set -euo pipefail
+
+B=$'\e[1m'; R=$'\e[0m'
+[ -t 1 ] || { B=""; R=""; }
+
+geral() { cat <<EOF
+${B}ATLAS-SIM — manual${R}
+  Ambiente Docker: ROS 2 Humble + Gazebo Harmonic + ArduPilot SITL + MAVROS.
+  O teu atlas_ws entra no container por volume em /home/ros/atlas_ws, por isso
+  o que editas no host aparece logo dentro do container.
+
+${B}USO${R}
+  ap-help              este resumo
+  ap-help setup        primeira vez (construir imagem e compilar o workspace)
+  ap-help sim          subir a simulação (1 comando ou containers separados)
+  ap-help dev          shell para debugar e correr o teu código
+  ap-help multi        2+ drones no mesmo mundo Gazebo (ap-multi)
+  ap-help qgc          usar o QGroundControl / missões da Ground Station
+  ap-help artex        SITL do avião do ARTEX
+  ap-help vars         variáveis de ambiente úteis
+  ap-help portas       portas usadas
+  ap-help problemas    erros comuns e o que fazer
+  ap-help tudo         tudo de uma vez
+
+${B}O DIA A DIA EM 4 LINHAS${R}  (no host)
+  cd ~/git_projects/atlas_ws/docker
+  xhost +local:docker
+  docker compose up -d                  # Gazebo + SITL + MAVROS em background
+  docker compose run --rm dev           # shell para o teu código
+  ...
+  docker compose down                   # desligar tudo no fim
+EOF
+}
+
+setup() { cat <<EOF
+${B}SETUP (só da primeira vez, ou quando mudar o Dockerfile/scripts)${R}
+  cd ~/git_projects/atlas_ws/docker
+  docker compose build                  # cria a imagem atlas-sim:humble
+  docker compose run --rm dev bash -lc 'atlas-ws-init && atlas-deps && atlas-build'
+
+  atlas-ws-init   clona no src/ o que faltar (ardupilot, ardupilot_gz, ...)
+  atlas-deps      rosdep install das dependências
+  atlas-build     colcon build -> build_docker/ install_docker/
+  ap-check        diz o que está instalado e o que falta
+
+${B}DEPOIS DE MEXER NO CÓDIGO${R}  (dentro do container)
+  atlas-build --packages-select atlas_mission     # só um pacote, mais rápido
+  Pacotes Python com --symlink-install: muitas vezes nem precisa recompilar.
+  O build do container vai para build_docker/ e install_docker/; o build/ e
+  install/ do host não são tocados.
+EOF
+}
+
+sim() { cat <<EOF
+${B}SUBIR A SIMULAÇÃO${R}  (no host, em ~/git_projects/atlas_ws/docker)
+  Antes de tudo, uma vez por sessão do PC:   xhost +local:docker
+
+${B}Opção A — containers separados (recomendado para debugar)${R}
+  docker compose up -d                  # Gazebo, SITL e MAVROS em background
+  docker compose logs -f sitl           # ver o log de um deles (gazebo|sitl|mavros)
+  docker attach atlas_sitl              # consola do MAVProxy (sair: Ctrl-p Ctrl-q)
+  docker compose down                   # desligar
+
+  Outro veículo:  VEHICLE=plane docker compose up -d      (copter|plane|vtol)
+
+${B}Opção B — tudo num terminal (tmux)${R}
+  docker compose run --rm dev ap-sim copter
+    painéis: Gazebo | SITL (MAVProxy) | MAVROS
+    Ctrl-b + seta   muda de painel
+    Ctrl-b d        sai e deixa a correr   (voltar: tmux attach -t sim)
+    tmux kill-session -t sim              desliga tudo
+
+${B}Opção C — à mão, um terminal por peça${R}  (dentro de 'docker compose run --rm dev')
+  ap-gazebo copter     # gz sim iris_runway.sdf
+  ap-sitl copter       # sim_vehicle.py ligado ao Gazebo
+  ap-mavros            # MAVROS em /mavros/...
+
+${B}Confirmar que está tudo ligado${R}
+  ros2 topic echo /mavros/state --once  # connected: true
+EOF
+}
+
+dev() { cat <<EOF
+${B}SHELL DE DESENVOLVIMENTO${R}
+  docker compose run --rm dev           # abre bash com ROS + workspace + ArduPilot
+                                        # (pode abrir quantos quiseres, em terminais diferentes)
+
+  Exemplos lá dentro:
+    ros2 topic list
+    ros2 topic echo /mavros/local_position/pose
+    ros2 run icarus_tests mission
+    ros2 launch atlas_mission mission.launch.py
+    python3 docs/multi_missoes/drone_agent.py --ros-args ...
+
+  Comandos MAVROS úteis:
+    ros2 service call /mavros/set_mode mavros_msgs/srv/SetMode "{custom_mode: 'GUIDED'}"
+    ros2 service call /mavros/cmd/arming mavros_msgs/srv/CommandBool "{value: true}"
+    ros2 service call /mavros/cmd/takeoff mavros_msgs/srv/CommandTOL "{altitude: 5.0}"
+
+  O teu código está em /home/ros/atlas_ws (= ~/git_projects/atlas_ws no host).
+  Edita no host com o teu editor e corre dentro do container.
+EOF
+}
+
+multi() { cat <<EOF
+${B}MULTI-DRONE (N iris no mesmo mundo, 1 container)${R}
+  ap-multi [N]          Gazebo + N SITL + N MAVROS          (N=2 por defeito)
+  ap-multi demo [N]     o mesmo + um drone_agent por drone  (missao + comunicacao)
+  ap-multi down         desliga tudo
+  ap-multi gen [N]      so gera o mundo/modelos (.multi_sim/)
+
+  Dentro do container:   docker compose run --rm dev ap-multi demo
+  (tmux: janelas sim | mavros | agents; Ctrl-b n/p troca; Ctrl-b d sai)
+
+  Topicos:   /drone1/mavros/...   /drone2/mavros/...   (SITL: tcp 5760, 5770, ...)
+  Comunicacao entre drones:   /droneK/cmd/waypoint (PoseStamped)  /droneK/status (String)
+  Env:   GUI=1  SPEEDUP=1  SPACING=3  WIPE=1  GCS=1  NO_TMUX=1  SETTLE=20
+  Usa um mundo com os iris JA la dentro: nao depende de "spawn" nem de
+  --use_sim_time. Mais detalhe: docs/multi_missoes/README.md
+EOF
+}
+
+qgc() { cat <<EOF
+${B}QGROUNDCONTROL / MISSÕES DA GROUND STATION${R}
+  Corre a QGC no host (fora do Docker). Como tudo usa a rede do host, ela vê o SITL.
+
+  O SITL manda MAVLink para:
+    UDP 14550 -> MAVROS
+    UDP 14551 -> QGC
+  A QGC escuta por defeito na 14550, que está ocupada pelo MAVROS. Por isso, uma vez:
+    QGC -> Application Settings -> Comm Links -> Add
+        Type: UDP   Port: 14551   -> Connect
+
+  Testar uma missão feita na QGC:
+    1. docker compose up -d
+    2. QGC: Plan -> Open (ou desenhar) -> Upload
+    3. QGC: Fly -> armar -> modo AUTO (ou "Start Mission")
+
+  Sem QGC, pela consola do MAVProxy (docker attach atlas_sitl):
+    wp load /home/ros/atlas_ws/<missao>.waypoints
+    mode GUIDED ; arm throttle ; takeoff 10 ; mode AUTO
+
+  Atenção: carregar missões ao mesmo tempo pelo MAVROS e pelo MAVProxy/QGC pode
+  dar "Mission upload timeout". Usa um de cada vez, ou sobe com NO_MAVPROXY=1.
+EOF
+}
+
+artex() { cat <<EOF
+${B}ARTEX (ArduPlane, sem Gazebo)${R}
+  docker compose --profile artex up
+    SITL de asa fixa na pista do ARTEX, já com src/artex27/params/artex27_sitl.param.
+    Fala direto com a QGC em UDP 14550 (abre a QGC antes ou depois, liga sozinha).
+
+  Na QGC:
+    Plan -> Open -> src/artex27/missions/artex27.plan -> Upload
+    Fly  -> modo AUTO -> armar
+
+  ARTEX_LOCATION=<nome> muda o ponto de partida (src/artex27/tools/sim/locations.txt)
+  ARTEX_WIPE=""         mantém os parâmetros da última corrida (por defeito apaga)
+EOF
+}
+
+vars() { cat <<EOF
+${B}VARIÁVEIS ÚTEIS${R}  (em docker/.env, ou à frente do comando: SPEEDUP=5 docker compose up)
+  VEHICLE=copter|plane|vtol   veículo e mundo
+  HEADLESS=1                  sem janelas (Gazebo -s, SITL sem mapa/consola)
+  SPEEDUP=5                   simulação 5x mais rápida
+  WIPE=1                      apaga parâmetros guardados do SITL
+  LOCATION=CMAC               ponto de partida (Tools/autotest/locations.txt)
+  INSTANCE=1                  2.º veículo: todas as portas +10
+  NO_MAVPROXY=1               SITL sem MAVProxy; MAVROS em tcp://127.0.0.1:5760
+  WAIT_GAZEBO=15              espera mais pelo Gazebo (PC lento)
+  MAVROS_DELAY=20             espera mais antes de arrancar o MAVROS
+  GUI_ONLY=1                  só a janela do Gazebo, ligada a um servidor já a correr
+  RENDER=ogre                 render antigo, se o Gazebo abrir preto
+  LIBGL_ALWAYS_SOFTWARE=1     render por software (sem GPU)
+  ROS_DOMAIN_ID=0             tem de ser igual em todos os containers
+EOF
+}
+
+portas() { cat <<EOF
+${B}PORTAS${R}  (instância 0; com INSTANCE=N soma 10*N)
+  9002/9003  UDP   SITL <-> plugin do Gazebo (JSON)
+  5760       TCP   MAVLink direto do SITL (com NO_MAVPROXY=1)
+  14550      UDP   MAVProxy -> MAVROS
+  14551      UDP   MAVProxy -> QGC
+EOF
+}
+
+problemas() { cat <<EOF
+${B}PROBLEMAS COMUNS${R}
+  Gazebo não abre janela / "cannot open display"
+      -> xhost +local:docker   (no host, depois de cada reboot)
+  Gazebo abre preto ou crasha
+      -> RENDER=ogre  ou  LIBGL_ALWAYS_SOFTWARE=1
+  SITL preso em "waiting for connection"
+      -> o Gazebo ainda não tinha carregado o modelo: WAIT_GAZEBO=15
+  /mavros/state com connected: false
+      -> fcu_url errado: com MAVProxy udp://:14550@ ; com NO_MAVPROXY=1 tcp://127.0.0.1:5760
+  Não arma (PreArm: ...)
+      -> espera 30-60 s pelo EKF/GPS; lê a mensagem na consola do MAVProxy
+  ros2 topic list não mostra nada de outro container
+      -> mesmo ROS_DOMAIN_ID em todos
+  "package not found" do teu pacote
+      -> atlas-build (ou --packages-select <pkg>) e abre uma shell nova
+  Mudei um script em docker/scripts e nada mudou
+      -> os scripts estão dentro da imagem: docker compose build
+  Algo estranho que não sabes o que é
+      -> ap-check
+EOF
+}
+
+case "${1:-}" in
+  ""|-h|--help|help) geral ;;
+  setup)     setup ;;
+  sim)       sim ;;
+  dev)       dev ;;
+  multi)     multi ;;
+  qgc|gcs)   qgc ;;
+  artex)     artex ;;
+  vars)      vars ;;
+  portas)    portas ;;
+  problemas) problemas ;;
+  tudo|all)  for f in geral setup sim dev multi qgc artex vars portas problemas; do $f; echo; done ;;
+  *) echo "tópico desconhecido: $1" >&2; geral; exit 1 ;;
+esac

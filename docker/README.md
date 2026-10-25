@@ -1,5 +1,7 @@
 # atlas-sim — ambiente ROS 2 Humble + Gazebo Harmonic + ArduPilot SITL + MAVROS
 
+> **Manual rápido:** `ap-help` dentro do container (ou `bash docker/scripts/ap-help` no host). `ap-help tudo` mostra tudo.
+
 ## Início rápido (TL;DR)
 
 Tudo mora em `~/git_projects/atlas_ws`; o ambiente em `atlas_ws/docker/`.
