@@ -122,6 +122,14 @@ ${B}MULTI-DRONE (N iris no mesmo mundo, 1 container)${R}
   Env:   GUI=1  SPEEDUP=1  SPACING=3  WIPE=1  GCS=1  NO_TMUX=1  SETTLE=20
   Usa um mundo com os iris JA la dentro: nao depende de "spawn" nem de
   --use_sim_time. Mais detalhe: docs/multi_missoes/README.md
+
+${B}QUAD + VTOL (o VTOL manda o alvo ao quad, missao Icarus sem fake_target)${R}
+  ap-vtol build         compila o arduplane (so a 1a vez)
+  ap-vtol demo          Gazebo + 2 SITL + 2 MAVROS + vtol_agent + icarus_tests mission
+  ap-vtol down          desliga tudo
+  Env:   PERSON="40,25" (x,y da pessoa no mundo)  QUAD_CMD="..."  GUI=1  SETTLE=20
+  Topicos:   quad /mavros/...   vtol /vtol/mavros/...
+  Mensagem:  /mavros/mission/vtol_person_position (NavSatFix) do VTOL para o quad
 EOF
 }
 

@@ -1,0 +1,198 @@
+#!/usr/bin/env bash
+# ap-vtol : quadcopter + VTOL (quadplane) no MESMO mundo Gazebo.
+#           O VTOL "encontra a pessoa" e manda a posicao ao quad; o quad corre a
+#           missao Icarus real (icarus_tests mission) SEM fake_target.
+#
+#   ap-vtol [up|demo]   up   = Gazebo + 2 SITL + 2 MAVROS
+#                       demo = o mesmo + vtol_agent + missao Icarus no quad
+#   ap-vtol build       compila o arduplane (so a 1a vez; demora ~10-20 min)
+#   ap-vtol down        desliga tudo
+#   ap-vtol gen         so gera o mundo e os modelos
+#
+# Veiculos / namespaces (a missao Icarus tem PREFIX='mavros' fixo, por isso o
+# QUAD fica no namespace por defeito):
+#   quad  : iris (ArduCopter), SITL instance 0, sysid 1, tcp 5760, topicos /mavros/...
+#   vtol  : alti_transition_quad (ArduPlane), instance 1, sysid 2, tcp 5770, topicos /vtol/mavros/...
+#
+# Comunicacao:  /vtol  --NavSatFix-->  /mavros/mission/vtol_person_position  --> quad
+#
+# Env:
+#   GUI=1          abre tambem a janela do Gazebo
+#   SETTLE=20      segundos entre Gazebo -> SITL -> MAVROS (PC lento: 40)
+#   WIPE=1         apaga parametros guardados do SITL (-w)
+#   NO_TMUX=1      sem tmux (logs em $ATLAS_WS/.multi_sim/logs)
+#   PERSON="40,25" posicao da pessoa no mundo (x,y em metros, ENU)
+#   QUAD_CMD=...   substitui o comando do quad (default: ros2 run icarus_tests mission)
+set -euo pipefail
+
+CMD="${1:-up}"
+case "${CMD}" in up|demo|down|gen|build) ;; *) echo "uso: ap-vtol [up|demo|down|gen|build]" >&2; exit 1 ;; esac
+
+: "${ATLAS_WS:=/home/ros/atlas_ws}"
+: "${ARDUPILOT_HOME:=${ATLAS_WS}/src/ardupilot}"
+OUT="${ATLAS_WS}/.multi_sim"
+SESSION="${SESSION:-vtol}"
+SETTLE="${SETTLE:-20}"
+SPEEDUP="${SPEEDUP:-1}"
+PERSON="${PERSON:-40,25}"
+SITLM="${SITL_MODELS:-${ATLAS_WS}/src/SITL_Models}"
+VTOL_X="${VTOL_X:-6}"
+
+down() {
+  tmux kill-session -t "${SESSION}" 2>/dev/null || true
+  for p in mavros_node arducopter arduplane ruby; do pkill -9 -x "$p" 2>/dev/null || true; done
+  pkill -9 -f "[g]z sim" 2>/dev/null || true
+  pkill -9 -f "[v]tol_agent.py" 2>/dev/null || true
+  pkill -9 -f "[i]carus_mission_sem_drop" 2>/dev/null || true
+  pkill -9 -f "[i]carus_tests/mission" 2>/dev/null || true
+}
+if [ "${CMD}" = "down" ]; then down; echo ">> desligado"; exit 0; fi
+
+if [ "${CMD}" = "build" ]; then
+  cd "${ARDUPILOT_HOME}"
+  env PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin ./waf configure --board sitl >/dev/null 2>&1 || true
+  env PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin ./waf plane -j"$(nproc)"
+  echo ">> arduplane em ${ARDUPILOT_HOME}/build/sitl/bin/arduplane"
+  exit 0
+fi
+
+# ------------------------------------------------------------ dependencias
+GZSRC="${ATLAS_WS}/src/ardupilot_gazebo"
+[ -d "${GZSRC}/models/iris_with_ardupilot" ] || { echo "!! falta ${GZSRC}/models/iris_with_ardupilot (corre atlas-ws-init)" >&2; exit 1; }
+[ -f "${GZSRC}/worlds/iris_runway.sdf" ]     || { echo "!! falta ${GZSRC}/worlds/iris_runway.sdf" >&2; exit 1; }
+
+if [ ! -d "${SITLM}/Gazebo/models/alti_transition_quad" ]; then
+  echo ">> a buscar SITL_Models (so a pasta Gazebo) para ${SITLM}"
+  git clone --depth 1 --filter=blob:none --sparse https://github.com/ArduPilot/SITL_Models.git "${SITLM}"
+  git -C "${SITLM}" sparse-checkout set Gazebo
+fi
+[ -f "${SITLM}/Gazebo/config/alti_transition_quad.param" ] || { echo "!! SITL_Models/Gazebo incompleto em ${SITLM}" >&2; exit 1; }
+
+PLANE_BIN="${ARDUPILOT_HOME}/build/sitl/bin/arduplane"
+if [ "${CMD}" != "gen" ] && ! command -v arduplane >/dev/null && [ ! -x "${PLANE_BIN}" ]; then
+  echo "!! arduplane nao encontrado. Compila-o uma vez com:  ap-vtol build" >&2; exit 1
+fi
+PLANE="$(command -v arduplane 2>/dev/null || echo "${PLANE_BIN}")"
+
+# ------------------------------------------------------------------ gerar
+mkdir -p "${OUT}/models" "${OUT}/worlds" "${OUT}/logs" "${OUT}/sitl1" "${OUT}/sitl2"
+python3 - "${GZSRC}" "${SITLM}/Gazebo" "${OUT}" "${VTOL_X}" <<'PY'
+import os, re, shutil, sys
+src, sm, out, vx = sys.argv[1], sys.argv[2], sys.argv[3], float(sys.argv[4])
+# --- iris (quad): mesmo gerador do ap-multi, 1 unidade, fdm 9002
+base = open(f"{src}/models/iris_with_ardupilot/model.sdf").read()
+if "<fdm_port_in>9002</fdm_port_in>" not in base or '<model name="iris_with_ardupilot">' not in base:
+    sys.exit("!! formato inesperado de iris_with_ardupilot/model.sdf")
+d = f"{out}/models/iris_ap1"; os.makedirs(d, exist_ok=True)
+open(f"{d}/model.sdf", "w").write(base.replace('<model name="iris_with_ardupilot">', '<model name="iris_ap1">', 1))
+open(f"{d}/model.config", "w").write('<?xml version="1.0"?>\n<model><name>iris_ap1</name><version>1.0</version>'
+                                     '<sdf version="1.9">model.sdf</sdf></model>\n')
+# --- VTOL: copia do modelo do SITL_Models com fdm 9012 (instance 1)
+vd = f"{out}/models/alti_transition_quad"
+if os.path.isdir(vd): shutil.rmtree(vd)
+shutil.copytree(f"{sm}/models/alti_transition_quad", vd, ignore=shutil.ignore_patterns("model.sdf.erb"))
+v = open(f"{vd}/model.sdf").read()
+if "<fdm_port_in>9002</fdm_port_in>" not in v:
+    sys.exit("!! formato inesperado de alti_transition_quad/model.sdf (fdm_port_in 9002)")
+open(f"{vd}/model.sdf", "w").write(v.replace("<fdm_port_in>9002</fdm_port_in>", "<fdm_port_in>9012</fdm_port_in>"))
+# --- mundo
+w = open(f"{src}/worlds/iris_runway.sdf").read()
+w = w.replace('<world name="iris_runway">', '<world name="quad_vtol_world">', 1)
+w = re.sub(r'<plugin\s+filename="gz-sim-sensors-system".*?</plugin>', "", w, flags=re.S)
+incs = (f'    <include>\n      <uri>model://iris_ap1</uri>\n      <name>quad</name>\n'
+        f'      <pose degrees="true">0 0 0.195 0 0 90</pose>\n    </include>\n'
+        f'    <include>\n      <uri>model://alti_transition_quad</uri>\n      <name>vtol</name>\n'
+        f'      <pose degrees="true">{vx} 0 0.35 0 0 90</pose>\n    </include>')
+w, k = re.subn(r'<include>\s*<uri>model://iris_with_(?:gimbal|ardupilot)</uri>.*?</include>', incs, w, count=1, flags=re.S)
+if k != 1: sys.exit("!! nao encontrei o <include> do iris em iris_runway.sdf")
+open(f"{out}/worlds/quad_vtol.sdf", "w").write(w)
+print(f">> gerado: {out}/worlds/quad_vtol.sdf (quad em 0,0 | vtol em {vx},0)")
+PY
+# parametros extra do VTOL (por cima do alti_transition_quad.param)
+cat > "${OUT}/vtol_extra.parm" <<'EOP'
+Q_ENABLE        1
+Q_FRAME_CLASS   1
+Q_FRAME_TYPE    3
+Q_GUIDED_MODE   1
+Q_OPTIONS       0
+FS_GCS_ENABL    0
+FS_SHORT_ACTN   0
+FS_LONG_ACTN    0
+EOP
+[ "${CMD}" = "gen" ] && exit 0
+
+for c in gz arducopter ros2 python3; do
+  command -v "$c" >/dev/null || { echo "!! '$c' nao esta no PATH (workspace compilado? atlas-build)" >&2; exit 1; }
+done
+DEF="${ARDUPILOT_HOME}/Tools/autotest/default_params"
+ARDU="$(command -v arducopter)"
+
+export GZ_SIM_RESOURCE_PATH="${OUT}/models:${GZSRC}/models:${GZSRC}/worlds:${ATLAS_WS}/src${GZ_SIM_RESOURCE_PATH:+:${GZ_SIM_RESOURCE_PATH}}"
+export SDF_PATH="${GZ_SIM_RESOURCE_PATH}"
+[ -d "${GZSRC}/build" ] && export GZ_SIM_SYSTEM_PLUGIN_PATH="${GZSRC}/build${GZ_SIM_SYSTEM_PLUGIN_PATH:+:${GZ_SIM_SYSTEM_PLUGIN_PATH}}"
+
+WORLD="${OUT}/worlds/quad_vtol.sdf"
+GZ_CMD="gz sim -s -r -v3 ${WORLD}"
+SITL_Q="cd ${OUT}/sitl1 && ${ARDU} --model json --speedup ${SPEEDUP} --slave 0 --sim-address=127.0.0.1 --instance 0 --sysid 1 ${WIPE:+-w} --defaults ${DEF}/copter.parm,${DEF}/gazebo-iris.parm"
+SITL_V="cd ${OUT}/sitl2 && ${PLANE} --model json --speedup ${SPEEDUP} --slave 0 --sim-address=127.0.0.1 --instance 1 --sysid 2 ${WIPE:+-w} --defaults ${DEF}/quadplane.parm,${SITLM}/Gazebo/config/alti_transition_quad.param,${OUT}/vtol_extra.parm"
+MAV_Q="ros2 launch mavros apm.launch fcu_url:=tcp://127.0.0.1:5760 tgt_system:=1"
+MAV_V="ros2 launch mavros apm.launch fcu_url:=tcp://127.0.0.1:5770 tgt_system:=2 namespace:=vtol"
+# os parametros ROS sao double: tem de levar casa decimal (40 -> 40.0)
+f() { awk -v v="$1" -v k="${2:-1}" 'BEGIN{printf "%.1f", v*k}'; }
+# O MAVROS so publica global_position/local_position se o ArduPilot enviar essas
+# mensagens; pede-se aqui os stream rates (a missao Icarus precisa de global_position).
+cat > "${OUT}/streams.sh" <<'EOS'
+#!/usr/bin/env bash
+for ns in /mavros /vtol/mavros; do
+  for i in 1 2 3 4 5 6 7 8; do
+    ros2 service call "${ns}/set_stream_rate" mavros_msgs/srv/StreamRate \
+      "{stream_id: 0, message_rate: 10, on_off: true}" >/dev/null 2>&1 && break
+    sleep 3
+  done
+done
+EOS
+STREAMS="bash ${OUT}/streams.sh"
+PX="$(f "${PERSON%%,*}")"; PY="$(f "${PERSON##*,}")"
+AG_V="python3 ${ATLAS_WS}/docs/multi_missoes/vtol_agent.py --ros-args -r __ns:=/vtol -p takeoff_alt:=20.0 -p person_x:=${PX} -p person_y:=${PY} -p search_x:=$(f "${PX}" 0.5) -p search_y:=$(f "${PY}" 0.5)"
+AG_Q="${STREAMS}; ${QUAD_CMD:-ros2 run icarus_tests mission --ros-args -p auto_confirm:=true}"
+
+down
+echo ">> quad + VTOL | mundo ${WORLD} | pessoa em (${PERSON})"
+echo ">> arduplane: ${PLANE}"
+
+if [ "${NO_TMUX:-0}" = "1" ]; then
+  L="${OUT}/logs"
+  ( eval "${GZ_CMD}" > "${L}/gz.log" 2>&1 & )
+  sleep "${SETTLE}"
+  ( eval "${SITL_Q}" > "${L}/sitl_quad.log" 2>&1 & )
+  ( eval "${SITL_V}" > "${L}/sitl_vtol.log" 2>&1 & )
+  sleep 5
+  ( eval "${MAV_Q}" > "${L}/mavros_quad.log" 2>&1 & )
+  ( eval "${MAV_V}" > "${L}/mavros_vtol.log" 2>&1 & )
+  if [ "${CMD}" = "demo" ]; then
+    sleep "${SETTLE}"
+    ( eval "${AG_Q}" > "${L}/agent_quad.log" 2>&1 & )   # quad primeiro: fica a espera da mensagem
+    ( eval "${AG_V}" > "${L}/agent_vtol.log" 2>&1 & )
+  fi
+  echo ">> a correr em background. logs: ${L}   desligar: ap-vtol down"
+  exit 0
+fi
+
+# janelas tmux: [sim] Gazebo + 2 SITL | [mavros] 2 MAVROS | [agents] quad (Icarus) + vtol_agent
+tmux new-session -d -s "${SESSION}" -n sim "${GZ_CMD}; bash"
+tmux split-window -t "${SESSION}":sim "sleep ${SETTLE}; ${SITL_Q}; bash"
+tmux split-window -t "${SESSION}":sim "sleep ${SETTLE}; ${SITL_V}; bash"
+tmux select-layout -t "${SESSION}":sim tiled
+tmux new-window -t "${SESSION}" -n mavros "sleep $(( SETTLE + 8 )); ${MAV_Q}; bash"
+tmux split-window -t "${SESSION}":mavros "sleep $(( SETTLE + 8 )); ${MAV_V}; bash"
+tmux select-layout -t "${SESSION}":mavros tiled
+if [ "${CMD}" = "demo" ]; then
+  tmux new-window -t "${SESSION}" -n agents "sleep $(( SETTLE + 14 )); ${AG_Q}; bash"
+  tmux split-window -t "${SESSION}":agents "sleep $(( SETTLE + 14 )); ${AG_V}; bash"
+  tmux select-layout -t "${SESSION}":agents tiled
+fi
+[ "${GUI:-0}" = "1" ] && tmux new-window -t "${SESSION}" -n gui "sleep 8; gz sim -g; bash"
+tmux select-window -t "${SESSION}":sim
+echo ">> tmux '${SESSION}': janelas sim | mavros | agents. Ctrl-b n/p troca, Ctrl-b d sai."
+echo ">> voltar: tmux attach -t ${SESSION}   desligar: ap-vtol down"
+if [ -t 1 ]; then exec tmux attach -t "${SESSION}"; fi
