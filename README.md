@@ -9,7 +9,7 @@ All development runs **inside a Docker container** (`atlas-sim:humble`). The hos
 Our ROS 2 nodes never talk MAVLink directly. They use `mavros_library`, which wraps MAVROS services and topics, and MAVROS talks to ArduPilot:
 
 ```
-mission node (atlas_mission / icarus_tests)
+mission node (atlas_mission / icarus_tests / artex27)
     → mavros_library (commands + sequences: arming, modes, missions, geofence)
         → MAVROS (ROS 2 ↔ MAVLink bridge)
             → ArduPilot (SITL on the PC, or the flight controller on the drone)
@@ -23,7 +23,7 @@ Missions made in a Ground Station (QGroundControl / Mission Planner) go straight
 | Vehicle | ArduPilot | Gazebo world | Used for |
 |---------|-----------|--------------|----------|
 | Multirotor | ArduCopter | `iris_runway.sdf` | Icarus mission, `atlas_mission`, multi-mission tests |
-| Fixed wing | ArduPlane | `zephyr_runway.sdf` (or SITL without Gazebo) | fixed-wing missions |
+| Fixed wing | ArduPlane | `zephyr_runway.sdf` (or SITL without Gazebo) | ARTEX (`artex27`) |
 | Quadplane VTOL | ArduPlane | `alti_transition_runway.sdf` | transition tests |
 
 <!-- TODO: real hardware table (companion computer, flight controller, link, radio, cameras). -->
@@ -36,9 +36,10 @@ Missions made in a Ground Station (QGroundControl / Mission Planner) go straight
 | `src/icarus_tests/` | Icarus mission (`ros2 run icarus_tests mission`) and tests `test_0` … `test_8` (sensors, modes, fence, waypoints, RTL...). **Submodule.** |
 | `src/atlas_mission/` | Mission nodes (`missao1/2/3`), `fake_target`, and the `mission.launch.py` / `mission_sim.launch.py` launch files. |
 | `src/atlas_bringup/` | `sim.launch.py`: starts Gazebo + SITL + MAVROS from a ROS 2 launch file. |
+| `src/artex27/` | ARTEX 26 mission (climb to 2000 m, gradient ≤ 10 %): builds mission, geofence and parameters, plus SITL failsafe tests. |
 | `src/ardupilot/`, `ardupilot_gazebo/`, `ardupilot_gz/`, `SITL_Models/` | **Upstream.** Cloned by `atlas-ws-init`, not versioned here. |
 | `docker/` | The environment: `Dockerfile`, `docker-compose.yml` and the `ap-*` / `atlas-*` scripts. |
-| `docs/` | HTML guides (`index.html` = Icarus) and `multi_missoes/`. |
+| `docs/` | HTML guides (`index.html` = Icarus, `artex27.html`) and `multi_missoes/`. |
 
 ## First-time setup
 
@@ -147,10 +148,18 @@ QGC runs on the **host**. Since everything uses host networking, it sees the SIT
 
 > Don't upload missions through MAVROS and QGC/MAVProxy at the same time — you get `Mission upload timeout`. Use one at a time, or start with `NO_MAVPROXY=1`.
 
+## ARTEX (fixed wing)
+
+```bash
+docker compose --profile artex up
+```
+
+ArduPlane SITL on the ARTEX runway, already loaded with `src/artex27/params/artex27_sitl.param`, talking directly to QGC on 14550. In QGC: *Plan → Open → `src/artex27/missions/artex27.plan` → Upload*, then AUTO and arm. The rest (failsafe tests, climb gradient, log analysis) is in [`src/artex27/README.md`](src/artex27/README.md) and [`docs/artex27.html`](docs/artex27.html).
+
 ## Kill everything
 
 ```bash
-docker compose down --remove-orphans                    # Option A containers
+docker compose down --remove-orphans                    # Option A / ARTEX containers
 docker ps --filter name=atlas                           # make sure nothing is left
 ```
 
@@ -168,6 +177,8 @@ For the Icarus tests and mission, in SITL or on the drone:
 | `FENCE_TYPE` | 1 | Other fences are defined manually |
 | `MIS_OPTIONS` | 4 | Mission continues after a LAND command |
 | `MIS_RESTART` | 0 | Mission doesn't restart when leaving AUTO |
+
+ARTEX parameters live in `src/artex27/params/` (`artex27.param` + the justified diff).
 
 ## Verify everything is working
 
@@ -206,7 +217,7 @@ git commit -m "bump icarus_tests"
 
 ## Repo rules
 
-- We only edit `atlas_mission`, `atlas_bringup`, `mavros_library`, `icarus_tests` and `docker/`.
+- We only edit `atlas_mission`, `atlas_bringup`, `artex27`, `mavros_library`, `icarus_tests` and `docker/`.
 - Upstream repos (`ardupilot`, `ardupilot_gazebo`, `ardupilot_gz`, `SITL_Models`) are never edited. Fixes go in as our own configuration or as a patch in `docker/patches/`.
 - Not in git: upstream repos, `build*/ install*/ log*/`, flight logs (`*.BIN`, `*.tlog`), core dumps and `docker/.env` (see [`.gitignore`](.gitignore)).
 - The `docker-compose.yaml`, `Dockerfile` and `entrypoint.sh` in the **repo root** are the old environment (`caixinha` image). The one that matters is in `docker/`.
@@ -215,5 +226,6 @@ git commit -m "bump icarus_tests"
 
 - [`docker/README.md`](docker/README.md) — the environment in detail (image, ports, variables, common problems)
 - [`docs/index.html`](docs/index.html) — Icarus mission guide
+- [`docs/artex27.html`](docs/artex27.html) — ARTEX mission
 - [`docs/multi_missoes/`](docs/multi_missoes/) — two drones in the same Gazebo world (`ap-multi`)
 - [`src/mavros_library/README.md`](src/mavros_library/README.md) — how the commands and sequences work
