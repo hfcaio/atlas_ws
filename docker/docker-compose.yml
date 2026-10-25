@@ -83,5 +83,40 @@ services:
     profiles: ["dev"]
     command: ["bash"]
 
+  # ---------------------------------------------------------------- ARTEX 2026
+  # Missao de subida a 2000 m. SITL nativo de asa fixa (sem Gazebo) na pista do
+  # ARTEX, a falar UDP directamente com o QGroundControl.
+  #
+  #   docker compose --profile artex up
+  #
+  # O QGC liga-se sozinho (escuta em UDP 14550). Depois, no QGC:
+  #   Plan -> Open -> src/artex27/missions/artex27.plan -> Upload
+  #   Fly  -> mudar o modo para AUTO e armar
+  #
+  # Nao ha MAVProxy: e' o proprio SITL que emite em UDP (--serial1). Assim o
+  # protocolo de missao nao colide, e o TCP 5760 fica livre para o MAVROS.
+  artex:
+    <<: *atlas
+    container_name: artex_sitl
+    profiles: ["artex"]
+    environment:
+      - DISPLAY=${DISPLAY:-:0}
+      - QT_X11_NO_MITSHM=1
+      - ATLAS_WS=/home/ros/atlas_ws
+      - ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-0}
+      - ARDUPILOT_LOCATIONS=/home/ros/atlas_ws/src/artex27/tools/sim/locations.txt
+    command:
+      - bash
+      - -lc
+      - >-
+        cd $$ARDUPILOT_HOME &&
+        sim_vehicle.py -v ArduPlane -f plane
+        -L ${ARTEX_LOCATION:-ARTEX_RUNWAY}
+        --speedup ${SPEEDUP:-1}
+        ${ARTEX_WIPE:--w}
+        --no-mavproxy
+        --add-param-file=/home/ros/atlas_ws/src/artex27/params/artex27_sitl.param
+        -A "--serial0=tcp:0 --serial1=udpclient:127.0.0.1:14550"
+
 volumes:
   ap_ccache:
